@@ -48,12 +48,12 @@ namespace rtti
  * \param mangled Mangled type name as returned by RTTI
  * \return Demangled type name
  */
-extern std::string Demangle(const char* mangled);
+std::string Demangle(const char* mangled);
 
 /*!
  * \return If a .so-file currently performs static initializations - returns name of .so file
  */
-extern std::string GetBinaryCurrentlyPerformingStaticInitialization();
+std::string GetBinaryCurrentlyPerformingStaticInitialization();
 
 /*!
  * Resize vector (also works for vectors with noncopyable types)

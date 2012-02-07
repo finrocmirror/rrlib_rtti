@@ -32,7 +32,7 @@ namespace rrlib
 namespace rtti
 {
 
-extern std::string GetBinaryCurrentlyPerformingStaticInitialization();
+std::string GetBinaryCurrentlyPerformingStaticInitialization();
 
 template<typename T>
 tDataType<T>::tDataTypeInfo::tDataTypeInfo()
