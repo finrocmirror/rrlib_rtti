@@ -53,7 +53,7 @@ class tDataTypeBase;
  * \param factory_parameter Custom parameter for possibly user defined factory
  * \return Buffer with read object (caller needs to take care of deleting it)
  */
-extern tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, const tDataTypeBase& expected_type, void* factory_parameter);
+tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, const tDataTypeBase& expected_type, void* factory_parameter);
 
 /*!
  * Serialize Object of arbitrary type to stream
@@ -62,7 +62,7 @@ extern tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, co
  * \param stream Stream to write to
  * \param to Object to write (may be null)
  */
-extern void WriteObject(rrlib::serialization::tOutputStream& stream, const tGenericObject* to);
+void WriteObject(rrlib::serialization::tOutputStream& stream, const tGenericObject* to);
 
 } // namespace
 

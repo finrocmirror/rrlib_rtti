@@ -28,6 +28,8 @@ namespace rtti
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 
+static tDataType<serialization::tMemoryBuffer> init_memory_buffer_data_type;
+
 tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, const tDataTypeBase& expected_type, void* factory_parameter)
 {
   //readSkipOffset();
