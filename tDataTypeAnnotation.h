@@ -45,6 +45,8 @@ public:
     annotated_type()
   {}
 
+  virtual ~tDataTypeAnnotation() {}
+
   /*!
    * \return Type that is annotated
    */
