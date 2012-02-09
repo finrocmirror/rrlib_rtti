@@ -425,7 +425,7 @@ public:
    * \return Annotation. Null if data type has no annotation of this type.
    */
   template <typename T>
-  inline T* GetAnnotation()
+  inline T* GetAnnotation() const
   {
     if (info != NULL)
     {
