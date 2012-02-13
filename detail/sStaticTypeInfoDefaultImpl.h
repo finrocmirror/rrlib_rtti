@@ -26,6 +26,7 @@
 #include <vector>
 #include <list>
 #include <deque>
+#include "rrlib/logging/messages.h"
 #include "rrlib/rtti/detail/deep_copy.h"
 
 namespace rrlib
@@ -100,8 +101,8 @@ struct tStaticTypeInfoSmartPtrSTLContainer
   }
 };
 
-template <typename T>
-struct sStaticTypeInfoDefaultImpl
+template <typename T, bool abstract>
+struct sStaticTypeInfoDefaultImplBase
 {
   static const bool stl_container_suitable = !(std::is_same<bool, T>::value || std::is_base_of<tIsListType<false, false>, T>::value || std::is_base_of<tIsListType<false, true>, T>::value);
   //static const bool shared_ptr_stl_container_suitable = !(std::has_trivial_destructor<T>::value || std::is_base_of<tIsListType<false, false>, T>::value || std::is_base_of<tIsListType<true, false>, T>::value);
@@ -131,6 +132,42 @@ struct sStaticTypeInfoDefaultImpl
     DeepCopyImpl(src, dest, f);
   }
 };
+
+template <typename T>
+struct sStaticTypeInfoDefaultImplBase<T, true>
+{
+  static const bool stl_container_suitable = false;
+  static const bool shared_ptr_stl_container_suitable = false;
+  static const bool valid_equal_to_operator = tHasEqualToOperator<T>::value;
+
+  static void Clear(T& t) {}
+
+  /*!
+   * Creates object at specified address. Used by tDataType.
+   */
+  static T* Create(void* placement)
+  {
+    RRLIB_LOG_PRINT(rrlib::logging::eLL_ERROR, "Abstract types cannot be created");
+    return NULL;
+  }
+
+  /*!
+   * Creates object by value. Used when adding elements to STL containers.
+   */
+  static T& CreateByValue()
+  {
+    RRLIB_LOG_PRINT(rrlib::logging::eLL_ERROR, "Abstract types cannot be created");
+    return *((T*)NULL);
+  }
+
+  static void DeepCopy(const T& src, T& dest, tFactory* f = NULL)
+  {
+    DeepCopyImpl(src, dest, f);
+  }
+};
+
+template <typename T>
+struct sStaticTypeInfoDefaultImpl : public sStaticTypeInfoDefaultImplBase<T, std::is_abstract<T>::value> {};
 
 template <typename T>
 struct sStaticTypeInfoDefaultImpl<std::vector<T>> : public tStaticTypeInfoSTLContainer<std::vector<T>, T> {};
