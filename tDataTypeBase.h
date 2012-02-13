@@ -192,8 +192,6 @@ public:
   };
 
 protected:
-  //    /** Maximum number of types */
-  //    public static final int MAX_TYPES = 2000;
 
   /*! Pointer to data type info (should not be copied every time for efficiency reasons) */
   const tDataTypeInfoRaw* info;
@@ -223,16 +221,14 @@ private:
     return valid;
   }
 
-  inline const char* GetLogDescription()
-  {
-    return "DataTypeBase";
-  }
+  /*!
+   * Helper for AddAnnotation (because we cannot store static variable in AddAnnotation that is the same for all types T)
+   */
+  static size_t& GetLastAnnotationIndex();
 
-  static std::recursive_mutex& GetMutex()
-  {
-    static std::recursive_mutex mutex;
-    return mutex;
-  }
+  const char* GetLogDescription();
+
+  static std::recursive_mutex& GetMutex();
 
   /*!
    * Helper method that safely provides static data type list
@@ -248,7 +244,7 @@ public:
   /*!
    * \param name Name of data type
    */
-  tDataTypeBase(tDataTypeInfoRaw* info_ = NULL);
+  tDataTypeBase(tDataTypeInfoRaw* info = NULL);
 
   /*!
    * Add annotation to this data type
@@ -259,7 +255,7 @@ public:
   inline void AddAnnotation(T* ann)
   {
     std::unique_lock<std::recursive_mutex>(GetMutex());
-    static size_t last_annotation_index = 0;
+    static size_t& last_annotation_index = GetLastAnnotationIndex();
     if (info != NULL)
     {
       assert(((ann->annotated_type == NULL)) && "Already used as annotation in other object. Not allowed (double deleting etc.)");
@@ -308,11 +304,11 @@ public:
    */
   void* CreateInstance(void* placement = NULL) const;
 
-  template < typename M = tGenericObjectManager >
   /*!
    * \param placement (Optional) Destination for placement new
    * \return Instance of Datatype as Generic object
    */
+  template < typename M = tGenericObjectManager >
   inline tGenericObject* CreateInstanceGeneric(void* placement = NULL) const
   {
     if (info == NULL)

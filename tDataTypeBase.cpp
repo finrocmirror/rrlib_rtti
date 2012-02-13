@@ -128,6 +128,23 @@ std::string tDataTypeBase::GetDataTypeNameFromRtti(const char* rtti)
 
 }
 
+size_t& tDataTypeBase::GetLastAnnotationIndex()
+{
+  static size_t last_index = 0;
+  return last_index;
+}
+
+const char* tDataTypeBase::GetLogDescription()
+{
+  return "DataTypeBase";
+}
+
+std::recursive_mutex& tDataTypeBase::GetMutex()
+{
+  static std::recursive_mutex mutex;
+  return mutex;
+}
+
 tDataTypeBase::tDataTypeInfoRaw::tDataTypeInfoRaw() :
   type(ePLAIN),
   name(),
