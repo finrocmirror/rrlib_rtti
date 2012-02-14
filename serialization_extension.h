@@ -90,6 +90,7 @@ template <typename C, typename T>
 void ReadSTLContainer(tInputStream& is, C& container)
 {
   size_t size = is.ReadInt();
+  __attribute__((unused))
   bool const_type = is.ReadBoolean();
   assert(const_type && "This method only supports constant types");
 
