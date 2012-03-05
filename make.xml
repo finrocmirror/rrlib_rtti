@@ -6,6 +6,7 @@
     <sources>
       *.cpp
       *.h
+      detail/*.h
     </sources>
   </rrlib>
 
