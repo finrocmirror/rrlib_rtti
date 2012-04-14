@@ -268,33 +268,37 @@ inline tInputStream& operator>> (tInputStream& is, std::deque<std::shared_ptr<T>
   return is;
 }
 
+} // namespace
+namespace xml2
+{
+
 template <typename T>
-inline rrlib::xml2::tXMLNode& operator<< (rrlib::xml2::tXMLNode& node, const std::vector<T>& v)
+inline tXMLNode& operator<< (tXMLNode& node, const std::vector<T>& v)
 {
   for (size_t i = 0; i < v.size(); i++)
   {
-    rrlib::xml2::tXMLNode& enode = node.AddChildNode("element");
+    tXMLNode& enode = node.AddChildNode("element");
     enode << v[i];
   }
   return node;
 }
 
 template <typename T>
-inline rrlib::xml2::tXMLNode& operator<< (rrlib::xml2::tXMLNode& node, const std::vector<std::shared_ptr<T>>& v)
+inline tXMLNode& operator<< (tXMLNode& node, const std::vector<std::shared_ptr<T>>& v)
 {
   for (size_t i = 0; i < v.size(); i++)
   {
-    rrlib::xml2::tXMLNode& enode = node.AddChildNode("element");
+    tXMLNode& enode = node.AddChildNode("element");
     enode << *v[i];
   }
   return node;
 }
 
 template <typename T>
-inline const rrlib::xml2::tXMLNode& operator>> (const rrlib::xml2::tXMLNode& n, std::vector<T>& v)
+inline const tXMLNode& operator>> (const tXMLNode& n, std::vector<T>& v)
 {
   v.clear();
-  for (rrlib::xml2::tXMLNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
+  for (tXMLNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
   {
     assert(node->Name().compare("element") == 0);
     v.push_back(rtti::sStaticTypeInfo<T>::CreateByValue());
@@ -304,12 +308,12 @@ inline const rrlib::xml2::tXMLNode& operator>> (const rrlib::xml2::tXMLNode& n, 
 }
 
 template <typename T>
-inline const rrlib::xml2::tXMLNode& operator>> (const rrlib::xml2::tXMLNode& n, std::vector<std::shared_ptr<T>>& v)
+inline const tXMLNode& operator>> (const tXMLNode& n, std::vector<std::shared_ptr<T>>& v)
 {
   v.clear();
   rtti::tDefaultFactory df;
   rtti::tDataType<T> dt;
-  for (rrlib::xml2::tXMLNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
+  for (tXMLNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
   {
     assert(node->Name().compare("element") == 0);
     v.push_back(NULL);
