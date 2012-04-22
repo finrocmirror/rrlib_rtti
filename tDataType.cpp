@@ -42,6 +42,7 @@ template class tDataType<unsigned long long int>;
 template class tDataType<double>;
 template class tDataType<float>;
 template class tDataType<bool>;
+template class tDataType<std::string>;
 
 } // namespace rrlib
 } // namespace rtti
