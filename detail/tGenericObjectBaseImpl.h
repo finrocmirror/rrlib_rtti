@@ -25,6 +25,7 @@
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 #include "rrlib/serialization/tStringInputStream.h"
 #include "rrlib/serialization/tStringOutputStream.h"
+#include "rrlib/serialization/type_traits.h"
 #endif
 
 #include "rrlib/rtti/tGenericObject.h"
@@ -45,7 +46,6 @@ class tFactory;
 
 namespace detail
 {
-
 
 template <typename T, bool EQ_OP>
 class tGenericObjectBaseImplEq : public tGenericObject
@@ -108,33 +108,34 @@ public:
 
   virtual void Deserialize(serialization::tInputStream& is)
   {
-    is >> *tGenericObject::GetData<T>();
+    serialization::Deserialize(is, *tGenericObject::GetData<T>());
   }
 
   virtual void Deserialize(serialization::tStringInputStream& is)
   {
-    is >> *tGenericObject::GetData<T>();
+    serialization::Deserialize(is, *tGenericObject::GetData<T>());
   }
 
   virtual void Deserialize(const xml2::tXMLNode& node)
   {
-    node >> *tGenericObject::GetData<T>();
+    serialization::Deserialize(node, *tGenericObject::GetData<T>());
   }
 
   virtual void Serialize(serialization::tOutputStream& os) const
   {
-    os << *tGenericObject::GetData<T>();
+    serialization::Serialize(os, *tGenericObject::GetData<T>());
   }
 
   virtual void Serialize(serialization::tStringOutputStream& os) const
   {
-    os << *tGenericObject::GetData<T>();
+    serialization::Serialize(os, *tGenericObject::GetData<T>());
   }
 
   virtual void Serialize(xml2::tXMLNode& node) const
   {
-    node << *tGenericObject::GetData<T>();
+    serialization::Serialize(node, *tGenericObject::GetData<T>());
   }
+
 #endif
 };
 

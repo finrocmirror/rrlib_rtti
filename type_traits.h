@@ -24,6 +24,10 @@
 
 #include <type_traits>
 
+#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
+#include "rrlib/serialization/type_traits.h"
+#endif
+
 namespace rrlib
 {
 namespace rtti
@@ -31,25 +35,28 @@ namespace rtti
 namespace trait_flags
 {
 
-// Bits for different traits
-static const int cHAS_TRIVIAL_ASSIGN = 1 << 0;
-static const int cHAS_TRIVIAL_COPY_CONSTRUCTOR = 1 << 1;
-static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 2;
-static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 3;
-static const int cIS_ABSTRACT = 1 << 4;
-static const int cIS_ARITHMETIC = 1 << 5;
-static const int cIS_ARRAY = 1 << 6;
-static const int cIS_CLASS = 1 << 7;
-static const int cIS_EMPTY = 1 << 8;
-static const int cIS_ENUM = 1 << 9;
-static const int cIS_FLOATING_POINT = 1 << 10;
-static const int cIS_INTEGRAL = 1 << 11;
-static const int cIS_OBJECT = 1 << 12;
-static const int cIS_POD = 1 << 13;
-static const int cIS_POINTER = 1 << 14;
-static const int cIS_SCALAR = 1 << 15;
-static const int cIS_SIGNED = 1 << 16;
-static const int cIS_UNSIGNED = 1 << 17;
+// Bits for different traits (note regarding order: the first four are interesting for other runtime environments in Finroc)
+static const int cIS_BINARY_SERIALIZABLE = 1 << 0;
+static const int cIS_STRING_SERIALIZABLE = 1 << 1;
+static const int cIS_XML_SERIALIZABLE = 1 << 2;
+static const int cIS_ENUM = 1 << 3;
+static const int cHAS_TRIVIAL_ASSIGN = 1 << 4;
+static const int cHAS_TRIVIAL_COPY_CONSTRUCTOR = 1 << 5;
+static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 6;
+static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 7;
+static const int cIS_ABSTRACT = 1 << 8;
+static const int cIS_ARITHMETIC = 1 << 9;
+static const int cIS_ARRAY = 1 << 10;
+static const int cIS_CLASS = 1 << 11;
+static const int cIS_EMPTY = 1 << 12;
+static const int cIS_FLOATING_POINT = 1 << 13;
+static const int cIS_INTEGRAL = 1 << 14;
+static const int cIS_OBJECT = 1 << 15;
+static const int cIS_POD = 1 << 16;
+static const int cIS_POINTER = 1 << 17;
+static const int cIS_SCALAR = 1 << 18;
+static const int cIS_SIGNED = 1 << 19;
+static const int cIS_UNSIGNED = 1 << 20;
 
 }
 
@@ -89,7 +96,13 @@ struct tTypeTraitsVector
     (std::is_pointer<T>::value ? trait_flags::cIS_POINTER : 0) |
     (std::is_scalar<T>::value ? trait_flags::cIS_SCALAR : 0) |
     (std::is_signed<T>::value ? trait_flags::cIS_SIGNED : 0) |
-    (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0);
+    (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0)
+#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
+    | (serialization::tIsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
+    (serialization::tIsStringSerializable<T>::value ? trait_flags::cIS_STRING_SERIALIZABLE : 0) |
+    (serialization::tIsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0)
+#endif
+    ;
 };
 
 /*!

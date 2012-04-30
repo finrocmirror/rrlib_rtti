@@ -115,25 +115,9 @@ class tDataType : public tDataTypeBase
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 
-    virtual void Deserialize(serialization::tInputStream& is, void* obj) const
-    {
-      T* s = static_cast<T*>(obj);
-      if (std::has_virtual_destructor<T>::value)
-      {
-        assert(typeid(*s).name() == typeid(T).name());
-      }
-      is >> *s;
-    }
+    virtual void Deserialize(serialization::tInputStream& is, void* obj) const;
 
-    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const
-    {
-      const T* s = static_cast<const T*>(obj);
-      if (std::has_virtual_destructor<T>::value)
-      {
-        assert(typeid(*s).name() == typeid(T).name());
-      }
-      os << *s;
-    }
+    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const;
 
 #endif
 

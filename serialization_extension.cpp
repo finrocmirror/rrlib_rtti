@@ -30,7 +30,7 @@ namespace rtti
 
 static tDataType<serialization::tMemoryBuffer> init_memory_buffer_data_type;
 
-tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, const tDataTypeBase& expected_type, void* factory_parameter)
+tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, void* factory_parameter, serialization::tDataEncoding enc)
 {
   //readSkipOffset();
   tDataTypeBase dt;
@@ -41,11 +41,11 @@ tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, const tDa
   }
 
   tGenericObject* buffer = stream.GetFactory()->CreateGenericObject(dt, factory_parameter);
-  buffer->Deserialize(stream);
+  buffer->Deserialize(stream, enc);
   return buffer;
 }
 
-void WriteObject(rrlib::serialization::tOutputStream& stream, const tGenericObject* to)
+void WriteObject(rrlib::serialization::tOutputStream& stream, const tGenericObject* to, serialization::tDataEncoding enc)
 {
   if (to == NULL)
   {
@@ -55,7 +55,7 @@ void WriteObject(rrlib::serialization::tOutputStream& stream, const tGenericObje
 
   //writeSkipOffsetPlaceholder();
   stream << to->GetType();
-  to->Serialize(stream);
+  to->Serialize(stream, enc);
   //skipTargetHere();
 }
 

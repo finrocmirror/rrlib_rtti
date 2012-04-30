@@ -121,6 +121,9 @@ public:
     /*! binary file that initializes data type statically */
     std::string binary;
 
+    /*! pointer to enum constants - if this is an enum type */
+    const std::vector<const char*>* enum_constants;
+
     tDataTypeInfoRaw();
 
     virtual ~tDataTypeInfoRaw();
@@ -256,7 +259,7 @@ public:
   {
     std::unique_lock<std::recursive_mutex>(GetMutex());
     static size_t& last_annotation_index = GetLastAnnotationIndex();
-    if (info != NULL)
+    if (info)
     {
       assert(((ann->annotated_type == NULL)) && "Already used as annotation in other object. Not allowed (double deleting etc.)");
       ann->annotated_type = *this;
@@ -280,22 +283,6 @@ public:
     {
       throw std::runtime_error("Null pointer !?");
     }
-  }
-
-  // Lookup data type by rtti name
-  //
-  // \param rtti_name rtti name
-  // \return Data type with specified name (== NULL if it could not be found)
-  static tDataTypeBase FindTypeByRtti(const char* rtti_name)
-  {
-    for (size_t i = 0; i < GetTypes().size(); i++)
-    {
-      if (GetTypes()[i].info->rtti_name == rtti_name)
-      {
-        return GetTypes()[i];
-      }
-    }
-    return tDataTypeBase(NULL);
   }
 
   /*!
@@ -322,72 +309,6 @@ public:
     tGenericObject* result = info->CreateInstanceGeneric(placement, sizeof(M));
     new(reinterpret_cast<char*>(result) + cMANAGER_OFFSET) M();
     return result;
-
-  }
-
-  // \return binary file that initializes data type statically
-  const std::string GetBinary() const
-  {
-    if (info != NULL)
-    {
-      return info->binary;
-    }
-    else
-    {
-      return "";
-    }
-  }
-
-  // \return rtti name of data type
-  const char* GetRttiName() const
-  {
-    if (info != NULL)
-    {
-      return info->rtti_name;
-    }
-    else
-    {
-      return typeid(void).name();
-    }
-  }
-
-  // \return size of data type (as returned from sizeof(T))
-  size_t GetSize() const
-  {
-    if (info != NULL)
-    {
-      return info->size;
-    }
-    else
-    {
-      return 0;
-    }
-  }
-
-  // for checks against NULL (if (type == NULL) {...} )
-  bool operator== (void* info_ptr) const
-  {
-    return info == info_ptr;
-  }
-
-  bool operator== (const tDataTypeBase& other) const
-  {
-    return info == other.info;
-  }
-
-  bool operator!= (void* info_ptr) const
-  {
-    return info != info_ptr;
-  }
-
-  bool operator!= (const tDataTypeBase& other) const
-  {
-    return info != other.info;
-  }
-
-  bool operator< (const tDataTypeBase& other) const
-  {
-    return info < other.info;
   }
 
   /*!
@@ -407,6 +328,24 @@ public:
   }
 
   /*!
+   * Lookup data type by rtti name
+   *
+   * \param rtti_name rtti name
+   * \return Data type with specified name (== NULL if it could not be found)
+   */
+  static tDataTypeBase FindTypeByRtti(const char* rtti_name)
+  {
+    for (size_t i = 0; i < GetTypes().size(); i++)
+    {
+      if (GetTypes()[i].info->rtti_name == rtti_name)
+      {
+        return GetTypes()[i];
+      }
+    }
+    return tDataTypeBase(NULL);
+  }
+
+  /*!
    * Lookup data type by name
    *
    * \param name Data Type name
@@ -423,13 +362,28 @@ public:
   template <typename T>
   inline T* GetAnnotation() const
   {
-    if (info != NULL)
+    if (info)
     {
       return static_cast<T*>(info->annotations[tAnnotationIndex<T>::index]);
     }
     else
     {
       throw std::runtime_error("Null pointer !?");
+    }
+  }
+
+  /*!
+   * \return binary file that initializes data type statically
+   */
+  const std::string GetBinary() const
+  {
+    if (info)
+    {
+      return info->binary;
+    }
+    else
+    {
+      return "";
     }
   }
 
@@ -446,11 +400,23 @@ public:
    */
   inline tDataTypeBase GetElementType() const
   {
-    if (info != NULL)
+    if (info)
     {
       return tDataTypeBase(info->element_type);
     }
     return GetNullType();
+  }
+
+  /*!
+   * \return If this is as enum type, returns enum constant names - otherwise NULL
+   */
+  inline const std::vector<const char*>* GetEnumConstants()
+  {
+    if (info)
+    {
+      return info->enum_constants;
+    }
+    return NULL;
   }
 
   /*!
@@ -466,7 +432,7 @@ public:
    */
   inline tDataTypeBase GetListType() const
   {
-    if (info != NULL)
+    if (info)
     {
       return tDataTypeBase(info->list_type);
     }
@@ -479,7 +445,7 @@ public:
   inline const std::string& GetName() const
   {
     static const std::string unknown = "NULL";
-    if (info != NULL)
+    if (info)
     {
       return info->name;
     }
@@ -499,7 +465,7 @@ public:
    */
   inline tDataTypeBase GetSharedPtrListType() const
   {
-    if (info != NULL)
+    if (info)
     {
       return tDataTypeBase(info->shared_ptr_list_type);
     }
@@ -507,11 +473,41 @@ public:
   }
 
   /*!
+   * \return rtti name of data type
+   */
+  const char* GetRttiName() const
+  {
+    if (info)
+    {
+      return info->rtti_name;
+    }
+    else
+    {
+      return typeid(void).name();
+    }
+  }
+
+  /*!
+   * \return size of data type (as returned from sizeof(T))
+   */
+  size_t GetSize() const
+  {
+    if (info)
+    {
+      return info->size;
+    }
+    else
+    {
+      return 0;
+    }
+  }
+
+  /*!
    * \return returns "Type" of data type (see enum)
    */
   inline tDataTypeBase::tType GetType() const
   {
-    if (info != NULL)
+    if (info)
     {
       return info->type;
     }
@@ -544,7 +540,7 @@ public:
    */
   inline int GetTypeTraits() const
   {
-    if (info != NULL)
+    if (info)
     {
       return info->type_traits;
     }
@@ -557,7 +553,7 @@ public:
    */
   inline int16_t GetUid() const
   {
-    if (info != NULL)
+    if (info)
     {
       return info->uid;
     }
@@ -574,6 +570,34 @@ public:
   inline bool IsConvertibleTo(const tDataTypeBase& data_type) const
   {
     return data_type == *this;
+  }
+
+  /*!
+   * for checks against NULL (if (type == NULL) {...} )
+   */
+  bool operator== (void* info_ptr) const
+  {
+    return info == info_ptr;
+  }
+
+  bool operator== (const tDataTypeBase& other) const
+  {
+    return info == other.info;
+  }
+
+  bool operator!= (void* info_ptr) const
+  {
+    return info != info_ptr;
+  }
+
+  bool operator!= (const tDataTypeBase& other) const
+  {
+    return info != other.info;
+  }
+
+  bool operator< (const tDataTypeBase& other) const
+  {
+    return info < other.info;
   }
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_

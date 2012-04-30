@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 #include "rrlib/rtti/tGenericObjectInstance.h"
+#include "rrlib/rtti/tGenericObjectWrapper.h"
 #include "rrlib/rtti/type_traits.h"
 #include "rrlib/logging/messages.h"
 
@@ -46,6 +47,10 @@ tDataType<T>::tDataTypeInfo::tDataTypeInfo()
   if (binary.length() > 0)
   {
     RRLIB_LOG_PRINT_STATIC(rrlib::logging::eLL_DEBUG_VERBOSE_1, "Data type ", name, " is statically loaded in '", binary, "'.");
+  }
+  if (std::is_enum<T>::value)
+  {
+    enum_constants = make_builder::GetEnumStrings<T>();
   }
 }
 
@@ -83,6 +88,32 @@ void tDataType<T>::tDataTypeInfo::DeepCopy(const void* src, void* dest, tFactory
 
   sStaticTypeInfo<T>::DeepCopy(*s, *d, f);
 }
+
+#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
+
+template<typename T>
+void tDataType<T>::tDataTypeInfo::Deserialize(serialization::tInputStream& is, void* obj) const
+{
+  T* s = static_cast<T*>(obj);
+  if (std::has_virtual_destructor<T>::value)
+  {
+    assert(typeid(*s).name() == typeid(T).name());
+  }
+  serialization::Deserialize(is, *s);
+}
+
+template<typename T>
+void tDataType<T>::tDataTypeInfo::Serialize(serialization::tOutputStream& os, const void* obj) const
+{
+  const T* s = static_cast<const T*>(obj);
+  if (std::has_virtual_destructor<T>::value)
+  {
+    assert(typeid(*s).name() == typeid(T).name());
+  }
+  serialization::Serialize(os, *s);
+}
+
+#endif
 
 } // namespace
 } // namespace

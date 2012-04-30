@@ -35,7 +35,6 @@ tDataTypeBase::tDataTypeBase(tDataTypeInfoRaw* info_) :
     std::unique_lock<std::recursive_mutex>(GetMutex());
     AddType(info_);
     info_->Init();
-
   }
 }
 
@@ -157,7 +156,8 @@ tDataTypeBase::tDataTypeInfoRaw::tDataTypeInfoRaw() :
   element_type(NULL),
   list_type(NULL),
   shared_ptr_list_type(NULL),
-  binary()
+  binary(),
+  enum_constants(NULL)
 {
   for (size_t i = 0; i < cMAX_ANNOTATIONS; i++)
   {
