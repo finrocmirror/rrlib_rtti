@@ -272,6 +272,15 @@ inline typename std::enable_if<ENABLE, tInputStream>::type& operator>> (tInputSt
 namespace xml2
 {
 
+// for std::vector<bool> support
+inline const tXMLNode& operator>> (const tXMLNode& node, std::vector<bool>::reference br)
+{
+  bool b;
+  node >> b;
+  br = b;
+  return node;
+}
+
 template <typename T, bool ENABLE = rrlib::serialization::tIsXMLSerializable<T>::value>
 inline typename std::enable_if<ENABLE, tXMLNode>::type& operator<< (tXMLNode& node, const std::vector<T>& v)
 {

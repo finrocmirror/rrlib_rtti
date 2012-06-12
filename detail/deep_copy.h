@@ -103,6 +103,12 @@ void DeepCopyImpl(const T& t, T& t2, rtti::tFactory* f)
   DeepCopy(t, t2, f);
 }
 
+// for std::vector<bool> support
+inline void DeepCopyImpl(const bool& b, std::vector<bool>::reference b2, rtti::tFactory* f)
+{
+  b2 = b;
+}
+
 } // namespace
 } // namespace
 } // namespace
