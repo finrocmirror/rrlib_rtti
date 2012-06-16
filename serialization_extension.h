@@ -269,11 +269,11 @@ inline typename std::enable_if<ENABLE, tInputStream>::type& operator>> (tInputSt
 }
 
 } // namespace
-namespace xml2
+namespace xml
 {
 
 // for std::vector<bool> support
-inline const tXMLNode& operator>> (const tXMLNode& node, std::vector<bool>::reference br)
+inline const tNode& operator>> (const tNode& node, std::vector<bool>::reference br)
 {
   bool b;
   node >> b;
@@ -282,32 +282,32 @@ inline const tXMLNode& operator>> (const tXMLNode& node, std::vector<bool>::refe
 }
 
 template <typename T, bool ENABLE = rrlib::serialization::tIsXMLSerializable<T>::value>
-inline typename std::enable_if<ENABLE, tXMLNode>::type& operator<< (tXMLNode& node, const std::vector<T>& v)
+inline typename std::enable_if<ENABLE, tNode>::type& operator<< (tNode& node, const std::vector<T>& v)
 {
   for (size_t i = 0; i < v.size(); i++)
   {
-    tXMLNode& enode = node.AddChildNode("element");
+    tNode& enode = node.AddChildNode("element");
     enode << v[i];
   }
   return node;
 }
 
 template <typename T, bool ENABLE = rrlib::serialization::tIsXMLSerializable<T>::value>
-inline typename std::enable_if<ENABLE, tXMLNode>::type& operator<< (tXMLNode& node, const std::vector<std::shared_ptr<T>>& v)
+inline typename std::enable_if<ENABLE, tNode>::type& operator<< (tNode& node, const std::vector<std::shared_ptr<T>>& v)
 {
   for (size_t i = 0; i < v.size(); i++)
   {
-    tXMLNode& enode = node.AddChildNode("element");
+    tNode& enode = node.AddChildNode("element");
     enode << *v[i];
   }
   return node;
 }
 
 template <typename T, bool ENABLE = rrlib::serialization::tIsXMLSerializable<T>::value>
-inline const typename std::enable_if<ENABLE, tXMLNode>::type& operator>> (const tXMLNode& n, std::vector<T>& v)
+inline const typename std::enable_if<ENABLE, tNode>::type& operator>> (const tNode& n, std::vector<T>& v)
 {
   v.clear();
-  for (tXMLNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
+  for (tNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
   {
     assert(node->Name().compare("element") == 0);
     v.push_back(rtti::sStaticTypeInfo<T>::CreateByValue());
@@ -317,12 +317,12 @@ inline const typename std::enable_if<ENABLE, tXMLNode>::type& operator>> (const 
 }
 
 template <typename T, bool ENABLE = rrlib::serialization::tIsXMLSerializable<T>::value>
-inline const typename std::enable_if<ENABLE, tXMLNode>::type& operator>> (const tXMLNode& n, std::vector<std::shared_ptr<T>>& v)
+inline const typename std::enable_if<ENABLE, tNode>::type& operator>> (const tNode& n, std::vector<std::shared_ptr<T>>& v)
 {
   v.clear();
   rtti::tDefaultFactory df;
   rtti::tDataType<T> dt;
-  for (tXMLNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
+  for (tNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
   {
     assert(node->Name().compare("element") == 0);
     v.push_back(NULL);

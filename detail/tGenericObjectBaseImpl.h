@@ -32,11 +32,11 @@
 
 namespace rrlib
 {
-namespace xml2
+namespace xml
 {
-class tXMLNode;
-} // namespace rrlib
-} // namespace xml2
+class tNode;
+}
+}
 
 namespace rrlib
 {
@@ -116,7 +116,7 @@ public:
     serialization::Deserialize(is, *tGenericObject::GetData<T>());
   }
 
-  virtual void Deserialize(const xml2::tXMLNode& node)
+  virtual void Deserialize(const xml::tNode& node)
   {
     serialization::Deserialize(node, *tGenericObject::GetData<T>());
   }
@@ -131,7 +131,7 @@ public:
     serialization::Serialize(os, *tGenericObject::GetData<T>());
   }
 
-  virtual void Serialize(xml2::tXMLNode& node) const
+  virtual void Serialize(xml::tNode& node) const
   {
     serialization::Serialize(node, *tGenericObject::GetData<T>());
   }
