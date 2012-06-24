@@ -43,6 +43,8 @@ template class tDataType<double>;
 template class tDataType<float>;
 template class tDataType<bool>;
 template class tDataType<std::string>;
+template class tDataType<rrlib::time::tTimestamp>;
+template class tDataType<rrlib::time::tDuration>;
 
 } // namespace rrlib
 } // namespace rtti

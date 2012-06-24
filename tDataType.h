@@ -200,6 +200,8 @@ extern template class tDataType<double>;
 extern template class tDataType<float>;
 extern template class tDataType<bool>;
 extern template class tDataType<std::string>;
+extern template class tDataType<rrlib::time::tTimestamp>;
+extern template class tDataType<rrlib::time::tDuration>;
 
 } // namespace
 } // namespace
