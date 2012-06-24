@@ -75,7 +75,7 @@ struct tTypeTraitsVector
 
   // Bit vector for type
   static const int value =
-#if (__GNUC__ >= 4 && __GNUC_MINOR__ >= 6)
+#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6))
     (std::has_trivial_copy_assign<T>::value ? trait_flags::cHAS_TRIVIAL_ASSIGN : 0) |
 #else
     (std::has_trivial_assign<T>::value ? trait_flags::cHAS_TRIVIAL_ASSIGN : 0) |
