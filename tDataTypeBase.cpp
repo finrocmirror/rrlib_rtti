@@ -45,7 +45,7 @@ void tDataTypeBase::AddType(tDataTypeInfoRaw* nfo)
   nfo->new_info = false;
   std::string msg("Adding data type ");
   msg += GetName();
-  RRLIB_LOG_PRINT(logging::eLL_DEBUG_VERBOSE_1, msg);
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, msg);
 }
 
 void* tDataTypeBase::CreateInstance(void* placement) const

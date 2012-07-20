@@ -147,7 +147,7 @@ struct sStaticTypeInfoDefaultImplBase<T, true>
    */
   static T* Create(void* placement)
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_ERROR, "Abstract types cannot be created");
+    RRLIB_LOG_PRINT(ERROR, "Abstract types cannot be created");
     return NULL;
   }
 
@@ -156,7 +156,7 @@ struct sStaticTypeInfoDefaultImplBase<T, true>
    */
   static T& CreateByValue()
   {
-    RRLIB_LOG_PRINT(rrlib::logging::eLL_ERROR, "Abstract types cannot be created");
+    RRLIB_LOG_PRINT(ERROR, "Abstract types cannot be created");
     return *((T*)NULL);
   }
 

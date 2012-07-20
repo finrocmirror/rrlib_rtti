@@ -84,7 +84,7 @@ struct tCopyImpl<T, true>
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
       rrlib::serialization::SerializationBasedDeepCopy(src, dest, f);
 #else
-      RRLIB_LOG_PRINT(rrlib::logging::eLL_ERROR, "Cannot deep copy object of type ", Demangle(typeid(T).name()), ". This will likely cause malfunction.");
+      RRLIB_LOG_PRINT(ERROR, "Cannot deep copy object of type ", Demangle(typeid(T).name()), ". This will likely cause malfunction.");
 #endif
     }
   }

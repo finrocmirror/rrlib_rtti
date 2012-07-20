@@ -52,14 +52,14 @@ std::string GetBinaryCurrentlyPerformingStaticInitialization()
   int len = backtrace(array, 255);
   if (len == 0)
   {
-    RRLIB_LOG_PRINT_STATIC(rrlib::logging::eLL_ERROR, "Empty stack trace.");
+    RRLIB_LOG_PRINT_STATIC(ERROR, "Empty stack trace.");
     return "";
   }
   char** symbols = backtrace_symbols(array, len);
   if (ld_so_file.length() == 0)
   {
     ld_so_file = GetSoFile(symbols[len - 1]);
-    RRLIB_LOG_PRINT_STATIC(rrlib::logging::eLL_DEBUG_VERBOSE_1, "System library for loading .so files: ", ld_so_file);
+    RRLIB_LOG_PRINT_STATIC(DEBUG_VERBOSE_1, "System library for loading .so files: ", ld_so_file);
   }
 
   for (int i = 1; i < len; i++)

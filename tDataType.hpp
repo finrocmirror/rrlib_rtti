@@ -46,7 +46,7 @@ tDataType<T>::tDataTypeInfo::tDataTypeInfo()
   binary = GetBinaryCurrentlyPerformingStaticInitialization();
   if (binary.length() > 0)
   {
-    RRLIB_LOG_PRINT_STATIC(rrlib::logging::eLL_DEBUG_VERBOSE_1, "Data type ", name, " is statically loaded in '", binary, "'.");
+    RRLIB_LOG_PRINT_STATIC(DEBUG_VERBOSE_1, "Data type ", name, " is statically loaded in '", binary, "'.");
   }
   if (std::is_enum<T>::value)
   {
