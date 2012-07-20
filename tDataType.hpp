@@ -50,7 +50,7 @@ tDataType<T>::tDataTypeInfo::tDataTypeInfo()
   }
   if (std::is_enum<T>::value)
   {
-    enum_constants = make_builder::GetEnumStrings<T>();
+    this->enum_strings = &make_builder::GetEnumStrings<T>();
   }
 }
 

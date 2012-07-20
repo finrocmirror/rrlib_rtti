@@ -122,7 +122,7 @@ public:
     std::string binary;
 
     /*! pointer to enum constants - if this is an enum type */
-    const std::vector<const char*>* enum_constants;
+    const make_builder::tEnumStrings *enum_strings;
 
     tDataTypeInfoRaw();
 
@@ -410,11 +410,11 @@ public:
   /*!
    * \return If this is as enum type, returns enum constant names - otherwise NULL
    */
-  inline const std::vector<const char*>* GetEnumConstants()
+  inline const make_builder::tEnumStrings *GetEnumStrings()
   {
     if (info)
     {
-      return info->enum_constants;
+      return info->enum_strings;
     }
     return NULL;
   }

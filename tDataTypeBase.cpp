@@ -157,7 +157,7 @@ tDataTypeBase::tDataTypeInfoRaw::tDataTypeInfoRaw() :
   list_type(NULL),
   shared_ptr_list_type(NULL),
   binary(),
-  enum_constants(NULL)
+  enum_strings(NULL)
 {
   for (size_t i = 0; i < cMAX_ANNOTATIONS; i++)
   {
