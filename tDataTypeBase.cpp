@@ -202,11 +202,11 @@ void tDataTypeBase::tDataTypeInfoRaw::SetName(const std::string& new_name)
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tDataTypeBase& dt)
 {
   serialization::tTypeEncoding encoding = stream.GetTypeEncoding();
-  if (encoding == serialization::eLocalUids)
+  if (encoding == serialization::tTypeEncoding::LOCAL_UIDS)
   {
     stream.WriteShort(dt.GetUid());
   }
-  else if (encoding == serialization::eNames)
+  else if (encoding == serialization::tTypeEncoding::NAMES)
   {
     stream.WriteString(dt.GetName());
   }
@@ -220,11 +220,11 @@ serialization::tOutputStream& operator << (serialization::tOutputStream& stream,
 serialization::tInputStream& operator >> (serialization::tInputStream& stream, tDataTypeBase& dt)
 {
   serialization::tTypeEncoding encoding = stream.GetTypeEncoding();
-  if (encoding == serialization::eLocalUids)
+  if (encoding == serialization::tTypeEncoding::LOCAL_UIDS)
   {
     dt = tDataTypeBase::GetType(stream.ReadShort());
   }
-  else if (encoding == serialization::eNames)
+  else if (encoding == serialization::tTypeEncoding::NAMES)
   {
     dt = tDataTypeBase::FindType(stream.ReadString());
   }
