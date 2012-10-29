@@ -145,10 +145,10 @@ std::recursive_mutex& tDataTypeBase::GetMutex()
 }
 
 tDataTypeBase::tDataTypeInfoRaw::tDataTypeInfoRaw() :
-  type(ePLAIN),
+  type(tType::UNKNOWN),
   name(),
   rtti_name(NULL),
-  size(-1),
+  size(0),
   type_traits(0),
   new_info(true),
   default_name(true),

@@ -88,7 +88,7 @@ class tDataType : public tDataTypeBase
 
     virtual void Init()
     {
-      if (type == ePLAIN)
+      if (type == tType::PLAIN)
       {
         list_type = GetListTypeInfo<sStaticTypeInfo<T>::stl_container_suitable>();
         shared_ptr_list_type = GetSharedPtrListTypeInfo<sStaticTypeInfo<T>::shared_ptr_stl_container_suitable >();

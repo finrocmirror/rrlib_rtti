@@ -71,7 +71,10 @@ class tDataTypeBase
 {
 public:
 
-  enum tType { ePLAIN, eLIST, ePTR_LIST, eNULL, eOTHER, eUNKNOWN };
+  enum class tType
+  {
+    PLAIN, LIST, PTR_LIST, NULL_TYPE, OTHER, UNKNOWN
+  };
 
 public:
 
@@ -511,7 +514,7 @@ public:
     {
       return info->type;
     }
-    return eNULL;
+    return tType::NULL_TYPE;
   }
 
   /*!

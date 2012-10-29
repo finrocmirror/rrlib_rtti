@@ -46,7 +46,7 @@ class tNothing {};
 template <typename T>
 struct tListInfo
 {
-  static const tDataTypeBase::tType type = tDataTypeBase::ePLAIN;
+  static const tDataTypeBase::tType type = tDataTypeBase::tType::PLAIN;
   typedef std::vector<T> tListType;
   typedef std::vector<std::shared_ptr<T> > tSharedPtrListType;
   typedef tNothing tElementType;
@@ -59,7 +59,7 @@ struct tListInfo
 template <typename T>
 struct tListInfoBase
 {
-  static const tDataTypeBase::tType type = tDataTypeBase::eLIST;
+  static const tDataTypeBase::tType type = tDataTypeBase::tType::LIST;
   typedef tNothing tListType;
   typedef tNothing tSharedPtrListType;
   typedef T tElementType;
@@ -72,7 +72,7 @@ struct tListInfoBase
 template <typename T>
 struct tListInfoBase<std::shared_ptr<T> >
 {
-  static const tDataTypeBase::tType type = tDataTypeBase::ePTR_LIST;
+  static const tDataTypeBase::tType type = tDataTypeBase::tType::PTR_LIST;
   typedef tNothing tListType;
   typedef tNothing tSharedPtrListType;
   typedef T tElementType;
