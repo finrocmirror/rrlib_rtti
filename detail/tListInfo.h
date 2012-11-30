@@ -22,7 +22,7 @@
 #ifndef __rrlib__rtti__detail__tListInfo_h__
 #define __rrlib__rtti__detail__tListInfo_h__
 
-#include "rrlib/rtti/tDataTypeBase.h"
+#include "rrlib/rtti/tType.h"
 #include <memory>
 
 namespace rrlib
@@ -46,20 +46,20 @@ class tNothing {};
 template <typename T>
 struct tListInfo
 {
-  static const tDataTypeBase::tType type = tDataTypeBase::tType::PLAIN;
+  static const tType::tClassification type = tType::tClassification::PLAIN;
   typedef std::vector<T> tListType;
   typedef std::vector<std::shared_ptr<T> > tSharedPtrListType;
   typedef tNothing tElementType;
   static std::string GetName()
   {
-    return tDataTypeBase::GetDataTypeNameFromRtti(typeid(T).name());
+    return tType::GetDataTypeNameFromRtti(typeid(T).name());
   }
 };
 
 template <typename T>
 struct tListInfoBase
 {
-  static const tDataTypeBase::tType type = tDataTypeBase::tType::LIST;
+  static const tType::tClassification type = tType::tClassification::LIST;
   typedef tNothing tListType;
   typedef tNothing tSharedPtrListType;
   typedef T tElementType;
@@ -72,7 +72,7 @@ struct tListInfoBase
 template <typename T>
 struct tListInfoBase<std::shared_ptr<T> >
 {
-  static const tDataTypeBase::tType type = tDataTypeBase::tType::PTR_LIST;
+  static const tType::tClassification type = tType::tClassification::PTR_LIST;
   typedef tNothing tListType;
   typedef tNothing tSharedPtrListType;
   typedef T tElementType;
@@ -83,7 +83,7 @@ struct tListInfoBase<std::shared_ptr<T> >
 };
 
 template <typename T>
-struct tListInfo<std::vector<T> > : public tListInfoBase<T> {};
+struct tListInfo<std::vector<T>> : public tListInfoBase<T> {};
 
 } // namespace
 } // namespace

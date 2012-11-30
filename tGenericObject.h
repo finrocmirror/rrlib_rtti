@@ -22,7 +22,7 @@
 #ifndef __rrlib__rtti__tGenericObject_h__
 #define __rrlib__rtti__tGenericObject_h__
 
-#include "rrlib/rtti/tDataTypeBase.h"
+#include "rrlib/rtti/tType.h"
 #include "rrlib/rtti/tTypedObject.h"
 #include <assert.h>
 #include <typeinfo>
@@ -34,7 +34,6 @@ namespace rrlib
 namespace rtti
 {
 class tFactory;
-class tGenericObjectManager;
 
 /*!
  * \author Max Reichardt
@@ -56,27 +55,21 @@ protected:
   /*! Wrapped object */
   void* wrapped;
 
-#if __SIZEOF_POINTER__ == 4
-  int fill_dummy; // fill 4 byte to ensure that managers are 8-byte-aligned on 32 bit platforms
-#endif
-
   /*!
    * Deep copy source object to this object
    * (types MUST match)
    *
    * \param source Source object
    */
-  virtual void DeepCopyFrom(const void* source, tFactory* f = NULL) = 0;
+  virtual void DeepCopyFrom(const void* source, tFactory* f) = 0;
 
 public:
-
-  static const size_t cMANAGER_OFFSET = (sizeof(void*) == 4) ? 16 : 24;
 
   /*!
    * \param wrapped Wrapped object
    * \param dt Data Type of wrapped object
    */
-  tGenericObject(tDataTypeBase dt) :
+  tGenericObject(tType dt) :
     wrapped()
   {
     this->type = dt;
@@ -97,11 +90,11 @@ public:
    *
    * \param source Source object
    */
-  inline void DeepCopyFrom(const tGenericObject* source, tFactory* f = NULL)
+  inline void DeepCopyFrom(const tGenericObject& source, tFactory* f = NULL)
   {
-    assert(((source->type == this->type)) && "Types must match");
+    assert((source.type == this->type) && "Types must match");
 
-    DeepCopyFrom(source->wrapped, f);
+    DeepCopyFrom(source.wrapped, f);
   }
 
   /*!
@@ -117,7 +110,7 @@ public:
    *  3) T has trivial destructor and memcmp returns 0 (heuristic, however, I have never encountered a type where this is invalid)
    *  4) rrlib_serialization is available and both objects are serialized to the same binary data (usually they are equal then)
    */
-  virtual bool Equals(tGenericObject& other)
+  virtual bool Equals(const tGenericObject& other)
   {
     if (wrapped == other.wrapped)
     {
@@ -139,34 +132,26 @@ public:
    * \return Wrapped object (type T must match original type)
    */
   template <typename T>
-  const T* GetData() const
+  const T& GetData() const
   {
     assert(typeid(T).name() == type.GetRttiName());
-    return static_cast<const T*>(wrapped);
+    return *static_cast<const T*>(wrapped);
   }
 
   /*!
    * \return Wrapped object (type T must match original type)
    */
   template <typename T>
-  inline T* GetData()
+  inline T& GetData()
   {
     assert(typeid(T).name() == type.GetRttiName());
-    return static_cast<T*>(wrapped);
-  }
-
-  /*!
-   * \return Management information for this generic object.
-   */
-  inline tGenericObjectManager* GetManager()
-  {
-    return reinterpret_cast<tGenericObjectManager*>(reinterpret_cast<char*>(this) + cMANAGER_OFFSET);
+    return *static_cast<T*>(wrapped);
   }
 
   /*!
    * Raw void pointer to wrapped object
    */
-  inline const void* GetRawDataPtr() const
+  inline const void* GetRawDataPointer() const
   {
     return wrapped;
   }

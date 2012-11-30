@@ -22,8 +22,7 @@
 #ifndef __rrlib__rtti__tDefaultFactory_h__
 #define __rrlib__rtti__tDefaultFactory_h__
 
-#include "rrlib/rtti/tGenericObjectManager.h"
-#include "rrlib/rtti/tDataTypeBase.h"
+#include "rrlib/rtti/tType.h"
 #include "rrlib/rtti/tFactory.h"
 #include <boost/utility.hpp>
 #include <memory>
@@ -47,14 +46,14 @@ public:
   tDefaultFactory() {}
   virtual ~tDefaultFactory() {}
 
-  virtual std::shared_ptr<void> CreateBuffer(const tDataTypeBase& dt)
+  virtual std::shared_ptr<void> CreateBuffer(const tType& dt)
   {
     return std::shared_ptr<void>(dt.CreateInstance());
   }
 
-  virtual tGenericObject* CreateGenericObject(const tDataTypeBase& dt, void* custom_parameter)
+  virtual tGenericObject* CreateGenericObject(const tType& dt, void* custom_parameter)
   {
-    return dt.CreateInstanceGeneric<>();
+    return dt.CreateInstanceGeneric();
   }
 
 };

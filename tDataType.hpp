@@ -41,6 +41,7 @@ tDataType<T>::tDataTypeInfo::tDataTypeInfo()
   type = detail::tListInfo<T>::type;
   rtti_name = typeid(T).name();
   size = sizeof(T);
+  generic_object_size = sizeof(tGenericObjectInstance<T>);
   name = detail::tListInfo<T>::GetName();
   type_traits = tTypeTraitsVector<T>::value;
   binary = GetBinaryCurrentlyPerformingStaticInitialization();
@@ -55,23 +56,14 @@ tDataType<T>::tDataTypeInfo::tDataTypeInfo()
 }
 
 template<typename T>
-tGenericObject* tDataType<T>::tDataTypeInfo::CreateInstanceGeneric(void* placement, size_t manager_size) const
+tGenericObject* tDataType<T>::tDataTypeInfo::CreateInstanceGeneric(void* placement) const
 {
-  assert(sizeof(tGenericObjectInstance<T>) <= tGenericObject::cMANAGER_OFFSET);
-  while (manager_size % 8 != 0)
-  {
-    manager_size++;
-  }
-  size_t obj_offset = tGenericObject::cMANAGER_OFFSET + manager_size;
-  size_t size = obj_offset + sizeof(T);
   if (placement == NULL)
   {
-    placement = operator new(size);
+    placement = operator new(sizeof(tGenericObjectInstance<T>));
   }
-  char* obj_addr = ((char*)placement) + obj_offset;
-  memset(obj_addr, 0, sizeof(T)); // set memory to 0 so that memcmp on class T can be performed cleanly for certain types
-  T* data_new = sStaticTypeInfo<T>::Create(obj_addr);
-  return new(placement) tGenericObjectInstance<T>(data_new);
+  memset(placement, 0, sizeof(tGenericObjectInstance<T>)); // set memory to 0 so that memcmp on class T can be performed cleanly for certain types
+  return new(placement) tGenericObjectInstance<T>();
 }
 
 template<typename T>

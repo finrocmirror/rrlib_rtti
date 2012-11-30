@@ -28,7 +28,7 @@ namespace rrlib
 {
 namespace rtti
 {
-class tDataTypeBase;
+class tType;
 class tGenericObject;
 
 /*!
@@ -47,7 +47,7 @@ public:
 
   // Create buffer and place it in provided shared pointer
   template <typename T>
-  void CreateBuffer(std::shared_ptr<T>& ptr, const tDataTypeBase& dt)
+  void CreateBuffer(std::shared_ptr<T>& ptr, const tType& dt)
   {
     ptr = std::static_pointer_cast<T>(CreateBuffer(dt));
   }
@@ -59,7 +59,7 @@ public:
    * \param dt Data type
    * \return Created buffer
    */
-  virtual std::shared_ptr<void> CreateBuffer(const tDataTypeBase& dt) = 0;
+  virtual std::shared_ptr<void> CreateBuffer(const tType& dt) = 0;
 
   /*!
    * Create generic object
@@ -69,7 +69,7 @@ public:
    * \param factory_parameter Custom factory parameter
    * \return Created buffer
    */
-  virtual tGenericObject* CreateGenericObject(const tDataTypeBase& dt, void* factory_parameter) = 0;
+  virtual tGenericObject* CreateGenericObject(const tType& dt, void* factory_parameter) = 0;
 
 };
 

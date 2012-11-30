@@ -42,7 +42,7 @@ namespace rrlib
 namespace rtti
 {
 class tGenericObject;
-class tDataTypeBase;
+class tType;
 
 /*!
  * Deserialize object with yet unknown type from stream
@@ -160,11 +160,11 @@ void WriteSmartPointerContainer(tOutputStream& os, const C& container)
 {
   os.WriteInt(container.size());
   os.WriteBoolean(false); // const type?
-  rtti::tDataTypeBase type_t = rtti::tDataType<T>();
+  rtti::tType type_t = rtti::tDataType<T>();
   typename C::const_iterator it;
   for (it = container.begin(); it != container.end(); it++)
   {
-    rtti::tDataTypeBase type;
+    rtti::tType type;
     if (*it)
     {
       type = rtti::tDataType<T>::FindTypeByRtti(typeid(**it).name());
@@ -196,15 +196,15 @@ void ReadSmartPointerContainer(tInputStream& is, C& container)
 
   container.resize(size);
 
-  rtti::tDataTypeBase type_t = rtti::tDataType<T>();
+  rtti::tType type_t = rtti::tDataType<T>();
   rtti::tDefaultFactory df;
   rtti::tFactory* f = is.GetFactory() ? is.GetFactory() : static_cast<rtti::tFactory*>(&df);
   typename C::iterator it;
   for (it = container.begin(); it != container.end(); it++)
   {
-    rtti::tDataTypeBase needed;
+    rtti::tType needed;
     is >> needed;
-    rtti::tDataTypeBase current;
+    rtti::tType current;
     if (*it)
     {
       current = rtti::tDataType<T>::FindTypeByRtti(typeid(**it).name());

@@ -65,9 +65,9 @@ protected:
 
   tGenericObjectBaseImplEq() : tGenericObject(tDataType<T>()) {}
 
-  virtual bool Equals(tGenericObject& other)
+  virtual bool Equals(const tGenericObject& other)
   {
-    return wrapped == other.GetRawDataPtr() || (GetType() == other.GetType() && (*GetData<T>() == *other.GetData<T>()));
+    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && (GetData<T>() == other.GetData<T>()));
   }
 };
 
@@ -91,7 +91,7 @@ public:
 
   virtual void Clear()
   {
-    sStaticTypeInfo<T>::Clear(*tGenericObject::GetData<T>());
+    sStaticTypeInfo<T>::Clear(tGenericObject::GetData<T>());
   }
 
   /*!
@@ -101,39 +101,39 @@ public:
    */
   inline void DeepCopyFromImpl(const T& source, tFactory* f = NULL)
   {
-    sStaticTypeInfo<T>::DeepCopy(source, *tGenericObject::GetData<T>(), f);
+    sStaticTypeInfo<T>::DeepCopy(source, tGenericObject::GetData<T>(), f);
   }
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 
   virtual void Deserialize(serialization::tInputStream& is)
   {
-    serialization::Deserialize(is, *tGenericObject::GetData<T>());
+    serialization::Deserialize(is, tGenericObject::GetData<T>());
   }
 
   virtual void Deserialize(serialization::tStringInputStream& is)
   {
-    serialization::Deserialize(is, *tGenericObject::GetData<T>());
+    serialization::Deserialize(is, tGenericObject::GetData<T>());
   }
 
   virtual void Deserialize(const xml::tNode& node)
   {
-    serialization::Deserialize(node, *tGenericObject::GetData<T>());
+    serialization::Deserialize(node, tGenericObject::GetData<T>());
   }
 
   virtual void Serialize(serialization::tOutputStream& os) const
   {
-    serialization::Serialize(os, *tGenericObject::GetData<T>());
+    serialization::Serialize(os, tGenericObject::GetData<T>());
   }
 
   virtual void Serialize(serialization::tStringOutputStream& os) const
   {
-    serialization::Serialize(os, *tGenericObject::GetData<T>());
+    serialization::Serialize(os, tGenericObject::GetData<T>());
   }
 
   virtual void Serialize(xml::tNode& node) const
   {
-    serialization::Serialize(node, *tGenericObject::GetData<T>());
+    serialization::Serialize(node, tGenericObject::GetData<T>());
   }
 
 #endif

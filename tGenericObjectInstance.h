@@ -35,20 +35,39 @@ namespace rtti
  *
  * This class should only be instantiated by tDataType !
  */
-template<typename T>
+template<typename T, bool NO_ARG_CONSTRUCTOR = tHasNoArgumentConstructor<T>::value>
 class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
 {
 public:
-  tGenericObjectInstance(T* wrapped_object) : detail::tGenericObjectBaseImpl<T>()
+  tGenericObjectInstance() :
+    detail::tGenericObjectBaseImpl<T>(),
+    wrapped_object(sStaticTypeInfo<T>::CreateByValue())
   {
-    tGenericObject::wrapped = wrapped_object;
+    tGenericObject::wrapped = &wrapped_object;
   }
 
-  virtual ~tGenericObjectInstance()
+private:
+
+  /*! Wrapped object */
+  T wrapped_object;
+
+};
+
+template<typename T>
+class tGenericObjectInstance<T, true> : public detail::tGenericObjectBaseImpl<T>
+{
+public:
+  tGenericObjectInstance() :
+    detail::tGenericObjectBaseImpl<T>(),
+    wrapped_object()
   {
-    T* t = tGenericObject::GetData<T>();
-    t->~T();
+    tGenericObject::wrapped = &wrapped_object;
   }
+
+private:
+
+  /*! Wrapped object */
+  T wrapped_object;
 
 };
 

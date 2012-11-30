@@ -22,7 +22,6 @@
 #ifndef __rrlib__rtti__tGenericObjectWrapper_h__
 #define __rrlib__rtti__tGenericObjectWrapper_h__
 
-#include "rrlib/rtti/tGenericObjectManager.h"
 #include "rrlib/rtti/detail/tGenericObjectBaseImpl.h"
 #include <assert.h>
 
@@ -35,19 +34,14 @@ namespace rtti
  *
  * Allows wrapping any object as GenericObject
  */
-template < typename T, typename M = tGenericObjectManager >
+template < typename T >
 class tGenericObjectWrapper : public detail::tGenericObjectBaseImpl<T>
 {
-private:
-
-  /*! Manager */
-  M manager;
 
 public:
-  tGenericObjectWrapper(T* wrapped_object) : detail::tGenericObjectBaseImpl<T>(), manager()
+  tGenericObjectWrapper(T& wrapped_object) : detail::tGenericObjectBaseImpl<T>()
   {
-    assert((reinterpret_cast<char*>(&manager) - reinterpret_cast<char*>(this)) == this->cMANAGER_OFFSET && "Manager offset invalid");
-    this->wrapped = wrapped_object;
+    this->wrapped = &wrapped_object;
   }
 
 };

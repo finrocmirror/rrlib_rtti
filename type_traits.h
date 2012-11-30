@@ -106,43 +106,53 @@ struct tTypeTraitsVector
 };
 
 /*!
- * This type-trait-like-struct is used to determine whether a type supports operator '<' .
+ * This type-trait is used to determine whether a type supports operator '<' .
  */
 template <typename T>
 struct tHasLessThanOperator
 {
-  template < typename U = T >
-  static int16_t Test(decltype((*(U*)(NULL)) < (*(U*)(NULL))))
-  {
-    return 0;
-  }
+  template < typename U >
+  static U &Make();
 
-  static int32_t Test(...)
-  {
-    return 0;
-  }
+  template < typename U = T >
+  static int16_t Test(decltype(Make<U>() < Make<U>()));
+
+  static int32_t Test(...);
 
   enum { value = sizeof(Test(true)) == sizeof(int16_t) };
 };
 
 /*!
- * This type-trait-like-struct is used to determine whether a type supports operator '==' .
+ * This type-trait is used to determine whether a type supports operator '==' .
  */
 template <typename T>
 struct tHasEqualToOperator
 {
-  template < typename U = T >
-  static int16_t Test(decltype((*(U*)(NULL)) == (*(U*)(NULL))))
-  {
-    return 0;
-  }
+  template < typename U >
+  static U &Make();
 
-  static int32_t Test(...)
-  {
-    return 0;
-  }
+  template < typename U = T >
+  static int16_t Test(decltype(Make<U>() == Make<U>()));
+
+  static int32_t Test(...);
 
   enum { value = sizeof(Test(true)) == sizeof(int16_t) };
+};
+
+/*!
+ * This type-trait is used to determine whether a type has a constructor without any arguments
+ */
+template <typename T>
+struct tHasNoArgumentConstructor
+{
+  static T &Make();
+
+  template < typename U = T >
+  static int16_t Test(decltype(U())&);
+
+  static int32_t Test(...);
+
+  enum { value = sizeof(Test(Make())) == sizeof(int16_t) };
 };
 
 } // namespace

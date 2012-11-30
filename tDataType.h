@@ -24,8 +24,7 @@
 
 #include "rrlib/rtti/rtti.h"
 #include "rrlib/rtti/type_traits.h"
-#include "rrlib/rtti/tGenericObjectManager.h"
-#include "rrlib/rtti/tDataTypeBase.h"
+#include "rrlib/rtti/tType.h"
 #include "rrlib/rtti/detail/tListInfo.h"
 #include <assert.h>
 #include <string>
@@ -51,44 +50,44 @@ class tFactory;
  * Objects of this class contain info about the data type T
  */
 template<typename T>
-class tDataType : public tDataTypeBase
+class tDataType : public tType
 {
   /*!
    * Data type info with factory functions
    */
-  class tDataTypeInfo : public tDataTypeBase::tDataTypeInfoRaw
+  class tDataTypeInfo : public tType::tInfo
   {
   public:
 
     tDataTypeInfo();
 
     template <bool B>
-    typename std::enable_if<B, tDataTypeBase::tDataTypeInfoRaw*>::type GetListTypeInfo()
+    typename std::enable_if<B, tType::tInfo*>::type GetListTypeInfo()
     {
       return tDataType<typename detail::tListInfo<T>::tListType>::GetDataTypeInfo();
     }
 
     template <bool B>
-    typename std::enable_if < !B, tDataTypeBase::tDataTypeInfoRaw* >::type GetListTypeInfo()
+    typename std::enable_if < !B, tType::tInfo* >::type GetListTypeInfo()
     {
       return NULL;
     }
 
     template <bool B>
-    typename std::enable_if<B, tDataTypeBase::tDataTypeInfoRaw*>::type GetSharedPtrListTypeInfo()
+    typename std::enable_if<B, tType::tInfo*>::type GetSharedPtrListTypeInfo()
     {
       return tDataType<typename detail::tListInfo<T>::tSharedPtrListType>::GetDataTypeInfo();
     }
 
     template <bool B>
-    typename std::enable_if < !B, tDataTypeBase::tDataTypeInfoRaw* >::type GetSharedPtrListTypeInfo()
+    typename std::enable_if < !B, tType::tInfo* >::type GetSharedPtrListTypeInfo()
     {
       return NULL;
     }
 
     virtual void Init()
     {
-      if (type == tType::PLAIN)
+      if (type == tClassification::PLAIN)
       {
         list_type = GetListTypeInfo<sStaticTypeInfo<T>::stl_container_suitable>();
         shared_ptr_list_type = GetSharedPtrListTypeInfo<sStaticTypeInfo<T>::shared_ptr_stl_container_suitable >();
@@ -109,7 +108,7 @@ class tDataType : public tDataTypeBase
       return sStaticTypeInfo<T>::Create(placement);
     }
 
-    virtual tGenericObject* CreateInstanceGeneric(void* placement, size_t manager_size) const;
+    virtual tGenericObject* CreateInstanceGeneric(void* placement) const;
 
     virtual void DeepCopy(const void* src, void* dest, tFactory* f) const;
 
@@ -124,7 +123,7 @@ class tDataType : public tDataTypeBase
   };
 
 public:
-  tDataType() : tDataTypeBase(GetDataTypeInfo())
+  tDataType() : tType(GetDataTypeInfo())
   {
     this->GetElementType();
     this->GetListType();
@@ -132,7 +131,7 @@ public:
   }
 
   // \param name Name data type should get (if different from default)
-  tDataType(const std::string& name) : tDataTypeBase(GetDataTypeInfo())
+  tDataType(const std::string& name) : tType(GetDataTypeInfo())
   {
     GetDataTypeInfo()->SetName(name);
     this->GetElementType();
@@ -145,17 +144,17 @@ public:
   //
   // \param rtti_name rtti name
   // \return Data type with specified name (== NULL if it could not be found)
-  static tDataTypeBase FindTypeByRtti(const char* rtti_name)
+  static tType FindTypeByRtti(const char* rtti_name)
   {
     if (rtti_name == GetDataTypeInfo()->rtti_name)
     {
       return tDataType();
     }
-    return tDataTypeBase::FindTypeByRtti(rtti_name);
+    return tType::FindTypeByRtti(rtti_name);
   }
 
   // \return DataTypeInfo for this type T
-  static tDataTypeInfoRaw* GetDataTypeInfo()
+  static tInfo* GetDataTypeInfo()
   {
     static tDataTypeInfo info;
     return &info;
@@ -173,11 +172,11 @@ namespace rrlib
 namespace rtti
 {
 template <>
-class tDataType<detail::tNothing> : public tDataTypeBase
+class tDataType<detail::tNothing> : public tType
 {
 public:
-  tDataType() : tDataTypeBase(NULL) {}
-  static tDataTypeInfoRaw* GetDataTypeInfo()
+  tDataType() : tType(NULL) {}
+  static tInfo* GetDataTypeInfo()
   {
     return NULL;
   }

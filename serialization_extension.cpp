@@ -33,7 +33,7 @@ static tDataType<serialization::tMemoryBuffer> init_memory_buffer_data_type;
 tGenericObject* ReadObject(rrlib::serialization::tInputStream& stream, void* factory_parameter, serialization::tDataEncoding enc)
 {
   //readSkipOffset();
-  tDataTypeBase dt;
+  tType dt;
   stream >> dt;
   if (dt == NULL)
   {
@@ -49,7 +49,7 @@ void WriteObject(rrlib::serialization::tOutputStream& stream, const tGenericObje
 {
   if (to == NULL)
   {
-    stream << tDataTypeBase();
+    stream << tType();
     return;
   }
 

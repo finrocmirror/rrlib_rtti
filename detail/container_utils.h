@@ -107,7 +107,7 @@ void CopySmartPointerSTLContainer(const C& src, C& dest, rtti::tFactory* f)
 {
   dest.resize(src.size());
 
-  tDataTypeBase type_t = tDataType<T>();
+  tType type_t = tDataType<T>();
   tDefaultFactory df;
   if (!f)
   {
@@ -121,7 +121,7 @@ void CopySmartPointerSTLContainer(const C& src, C& dest, rtti::tFactory* f)
       dest[i].reset();
       continue;
     }
-    tDataTypeBase needed = tDataType<T>::FindTypeByRtti(typeid(*src[i]).name());
+    tType needed = tDataType<T>::FindTypeByRtti(typeid(*src[i]).name());
     if ((!dest[i]) || tDataType<T>::FindTypeByRtti(typeid(*dest[i]).name()) != needed)
     {
       f->CreateBuffer(dest[i], needed);

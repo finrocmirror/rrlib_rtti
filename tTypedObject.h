@@ -23,7 +23,7 @@
 #ifndef __rrlib__rtti__tTypedObject_h__
 #define __rrlib__rtti__tTypedObject_h__
 
-#include "rrlib/rtti/tDataTypeBase.h"
+#include "rrlib/rtti/tType.h"
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 #include "rrlib/serialization/tSerializable.h"
@@ -50,7 +50,7 @@ class tTypedObject
 protected:
 
   /*! Type of object */
-  tDataTypeBase type;
+  tType type;
 
 public:
 
@@ -58,7 +58,7 @@ public:
    * \return Type of object
    */
   tTypedObject() :
-    type(NULL)
+    type()
   {}
 
   virtual ~tTypedObject() {}
@@ -71,7 +71,7 @@ public:
     return *this;
   }
 
-  inline tDataTypeBase GetType() const
+  inline tType GetType() const
   {
     return type;
   }
