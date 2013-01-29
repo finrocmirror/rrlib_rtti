@@ -124,8 +124,11 @@ public:
     /*! binary file that initializes data type statically */
     std::string binary;
 
-    /*! pointer to enum constants - if this is an enum type */
-    const make_builder::tEnumStrings *enum_strings;
+    /*! pointer to enum string constants - if this is an enum type */
+    const char * const *enum_strings;
+
+    /*! dimension of enum string constants array - if this is an enum type */
+    size_t enum_strings_dimension;
 
     tDataTypeInfoRaw();
 
@@ -411,15 +414,27 @@ public:
   }
 
   /*!
-   * \return If this is as enum type, returns enum constant names - otherwise NULL
+   * \return If this is as enum type, returns enum constant names array - otherwise NULL
    */
-  inline const make_builder::tEnumStrings *GetEnumStrings()
+  inline const char * const *GetEnumStrings()
   {
     if (info)
     {
       return info->enum_strings;
     }
     return NULL;
+  }
+
+  /*!
+   * \return Returns dimension of enum constant names array - if not an enum, zero obviously
+   */
+  inline size_t GetEnumStringsDimension()
+  {
+    if (info)
+    {
+      return info->enum_strings_dimension;
+    }
+    return 0;
   }
 
   /*!
