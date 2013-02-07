@@ -281,7 +281,8 @@ tType::tInfo::tInfo() :
   list_type(NULL),
   shared_ptr_list_type(NULL),
   binary(),
-  enum_strings(NULL)
+  enum_strings(NULL),
+  enum_strings_dimension(0)
 {
   for (size_t i = 0; i < cMAX_ANNOTATIONS; i++)
   {
