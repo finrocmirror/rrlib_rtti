@@ -291,7 +291,7 @@ public:
   /*!
    * \return Number of registered types
    */
-  static int16_t GetTypeCount();
+  static uint16_t GetTypeCount();
 
   /*!
    * \return Bit vector of type traits determined at compile time (see tTypeTraitVector)

@@ -262,9 +262,9 @@ tType tType::GetType(int16_t uid)
   return internal::GetTypes()[uid];
 }
 
-int16_t tType::GetTypeCount()
+uint16_t tType::GetTypeCount()
 {
-  return static_cast<int16_t>(internal::GetTypes().size());
+  return static_cast<uint16_t>(internal::GetTypes().size());
 }
 
 tType::tInfo::tInfo() :
