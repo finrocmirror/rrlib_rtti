@@ -255,7 +255,7 @@ std::string tType::GetDataTypeNameFromRtti(const char* rtti)
 
 tType tType::GetType(int16_t uid)
 {
-  if (uid <= -1 || static_cast<int>(uid) >= internal::GetTypes().size())
+  if (uid <= -1 || static_cast<size_t>(uid) >= internal::GetTypes().size())
   {
     return tType();
   }

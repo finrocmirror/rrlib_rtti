@@ -309,9 +309,11 @@ inline const typename std::enable_if<ENABLE, tNode>::type& operator>> (const tNo
   v.clear();
   for (tNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
   {
-    assert(node->Name().compare("element") == 0);
-    v.push_back(rtti::sStaticTypeInfo<T>::CreateByValue());
-    (*node) >> v[v.size() - 1];
+    if (node->Name().compare("element") == 0)
+    {
+      v.push_back(rtti::sStaticTypeInfo<T>::CreateByValue());
+      (*node) >> v[v.size() - 1];
+    }
   }
   return n;
 }
@@ -324,10 +326,12 @@ inline const typename std::enable_if<ENABLE, tNode>::type& operator>> (const tNo
   rtti::tDataType<T> dt;
   for (tNode::const_iterator node = n.ChildrenBegin(); node != n.ChildrenEnd(); ++node)
   {
-    assert(node->Name().compare("element") == 0);
-    v.push_back(NULL);
-    static_cast<rtti::tFactory&>(df).CreateBuffer(v[v.size() - 1], dt);
-    (*node) >> *v[v.size() - 1];
+    if (node->Name().compare("element") == 0)
+    {
+      v.push_back(NULL);
+      static_cast<rtti::tFactory&>(df).CreateBuffer(v[v.size() - 1], dt);
+      (*node) >> *v[v.size() - 1];
+    }
   }
   return n;
 }
