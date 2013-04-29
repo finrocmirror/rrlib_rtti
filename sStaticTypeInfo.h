@@ -31,6 +31,12 @@ namespace rrlib
 {
 namespace rtti
 {
+
+/*!
+ * Tags default sStaticTypeInfo
+ */
+struct sDefaultStaticTypeInfo {};
+
 /*!
  * \author Max Reichardt
  *
@@ -48,7 +54,7 @@ namespace rtti
  *
  */
 template <typename T>
-struct sStaticTypeInfo : public detail::sStaticTypeInfoDefaultImpl<T>
+struct sStaticTypeInfo : public detail::sStaticTypeInfoDefaultImpl<T>, public sDefaultStaticTypeInfo
 {
 };
 

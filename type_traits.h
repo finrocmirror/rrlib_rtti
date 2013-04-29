@@ -139,21 +139,6 @@ struct tHasEqualToOperator
   enum { value = sizeof(Test(true)) == sizeof(int16_t) };
 };
 
-/*!
- * This type-trait is used to determine whether a type has a constructor without any arguments
- */
-template <typename T>
-struct tHasNoArgumentConstructor
-{
-  static T &Make();
-
-  template < typename U = T >
-  static int16_t Test(decltype(U())&);
-
-  static int32_t Test(...);
-
-  enum { value = sizeof(Test(Make())) == sizeof(int16_t) };
-};
 
 } // namespace
 } // namespace
