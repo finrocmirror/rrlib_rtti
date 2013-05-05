@@ -66,6 +66,9 @@ namespace rtti
 // Const values
 //----------------------------------------------------------------------
 
+/*! we need to avoid reallocation in order to make vector thread safe. Therefore it is created with this capacity. */
+const size_t cMAX_TYPES = 1000;
+
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
@@ -77,12 +80,20 @@ static std::recursive_mutex& GetMutex()
   return mutex;
 }
 
+static std::vector<tType>& GetTypeVector()
+{
+  static std::vector<tType> types;
+  types.reserve(cMAX_TYPES); // we need to avoid reallocation in order to make vector thread safe
+  return types;
+}
+
 /*!
  * Helper method that safely provides static data type list
  */
 static std::vector<tType>& GetTypes()
 {
-  static std::vector<tType> types;
+  static std::vector<tType>& types = GetTypeVector(); // we introduce an extra method to avoid doing or checking for reserve() on every call
+  assert(types.capacity() >= cMAX_TYPES);
   return types;
 }
 
@@ -106,6 +117,11 @@ tType::tType(tType::tInfo* info) :
     // Add data type to registry
     std::unique_lock<std::recursive_mutex> lock(internal::GetMutex());
     info->uid = static_cast<int16_t>(internal::GetTypes().size());
+    if (internal::GetTypes().size() >= cMAX_TYPES)
+    {
+      RRLIB_LOG_PRINT(ERROR, "Maximum number of data types exceeded. Increase cMAX_TYPES.");
+      throw std::runtime_error("Maximum number of data types exceeded. Increase cMAX_TYPES.");
+    }
     internal::GetTypes().push_back(*this);
     info->new_info = false;
     RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Adding data type ", GetName());
