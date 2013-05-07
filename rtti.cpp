@@ -19,6 +19,14 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 //----------------------------------------------------------------------
+/*!\file    rrlib/rtti/rtti.cpp
+ *
+ * \author  Max Reichardt
+ *
+ * \date    2012-02-05
+ *
+ */
+//----------------------------------------------------------------------
 #include "rrlib/rtti/rtti.h"
 #include <cxxabi.h>
 #include <execinfo.h>

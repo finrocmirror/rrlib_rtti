@@ -19,6 +19,16 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 //----------------------------------------------------------------------
+/*!\file    rrlib/rtti/detail/deep_copy.h
+ *
+ * \author  Max Reichardt
+ *
+ * \date    2012-02-05
+ *
+ * \brief
+ *
+ */
+//----------------------------------------------------------------------
 #ifndef __rrlib__rtti__detail__deep_copy_h__
 #define __rrlib__rtti__detail__deep_copy_h__
 
