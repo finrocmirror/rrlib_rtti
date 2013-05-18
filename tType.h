@@ -51,7 +51,7 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include <boost/noncopyable.hpp>
+#include "rrlib/util/tNoncopyable.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -383,7 +383,7 @@ public:
 protected:
 
   /*! Generic data type information */
-  struct tInfo : public boost::noncopyable
+  struct tInfo : private util::tNoncopyable
   {
     /*! Type of data type */
     tType::tClassification type;

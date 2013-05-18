@@ -64,6 +64,23 @@ protected:
   using tGenericObject::wrapped;
 
   tGenericObjectBaseImplEq() : tGenericObject(tDataType<T>()) {}
+
+  virtual bool Equals(const tGenericObject& other)
+  {
+    if (this->GetRawDataPointer() == other.GetRawDataPointer())
+    {
+      return true;
+    }
+    if (std::has_trivial_destructor<T>::value)
+    {
+      return GetType() == other.GetType() && memcmp(GetRawDataPointer(), other.GetRawDataPointer(), GetType().GetSize()) == 0;
+    }
+#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
+    return GetType() == other.GetType() && serialization::SerializationEquals(GetData<T>(), other.GetData<T>());
+#else
+    return false;
+#endif
+  }
 };
 
 template <typename T>

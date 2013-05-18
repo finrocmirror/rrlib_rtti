@@ -32,10 +32,6 @@
 #include "rrlib/rtti/type_traits.h"
 #include "rrlib/logging/messages.h"
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-#include "rrlib/serialization/tSerializable.h"
-#endif
-
 
 namespace rrlib
 {

@@ -23,67 +23,68 @@
  *
  * \author  Max Reichardt
  *
- * \date    2012-02-05
+ * \date    2013-05-18
  *
- * \brief
+ * \brief   Contains tGenericObject
+ *
+ * \b tGenericObject
+ *
+ * Container/wrapper for an arbitrary object.
+ *
+ * Provides base functionality such as deep copying, type information
+ * and serialization for wrapped object.
+ * It also asserts that casting back is only possible to the original type.
+ *
+ * This allows to handle objects in a uniform way.
  *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__tGenericObject_h__
 #define __rrlib__rtti__tGenericObject_h__
 
-#include "rrlib/rtti/tType.h"
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
+#include "rrlib/serialization/serialization.h"
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/tTypedObject.h"
-#include <assert.h>
-#include <typeinfo>
-#include <cstring>
 
-
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
 class tFactory;
 
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! Generic object wrapper
 /*!
- * \author Max Reichardt
- *
  * Container/wrapper for an arbitrary object.
  *
  * Provides base functionality such as deep copying, type information
- * and serialization.
- * It also assert that casting back is only possible to the original type.
+ * and serialization for wrapped object.
+ * It also asserts that casting back is only possible to the original type.
  *
  * This allows to handle objects in a uniform way.
- *
- * Memory Layout of all subclasses: vtable ptr | datatype ptr | object ptr | management info raw memory of size M
  */
-class tGenericObject : public tTypedObject, boost::noncopyable
+class tGenericObject : public tTypedObject, private util::tNoncopyable
 {
-protected:
 
-  /*! Wrapped object */
-  void* wrapped;
-
-  /*!
-   * Deep copy source object to this object
-   * (types MUST match)
-   *
-   * \param source Source object
-   */
-  virtual void DeepCopyFrom(const void* source, tFactory* f) = 0;
-
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
-
-  /*!
-   * \param wrapped Wrapped object
-   * \param dt Data Type of wrapped object
-   */
-  tGenericObject(tType dt) :
-    wrapped()
-  {
-    this->type = dt;
-  }
 
   // to ensure that all generic objects have virtual destructor
   virtual ~tGenericObject() {}
@@ -103,7 +104,6 @@ public:
   inline void DeepCopyFrom(const tGenericObject& source, tFactory* f = NULL)
   {
     assert((source.type == this->type) && "Types must match");
-
     DeepCopyFrom(source.wrapped, f);
   }
 
@@ -120,23 +120,7 @@ public:
    *  3) T has trivial destructor and memcmp returns 0 (heuristic, however, I have never encountered a type where this is invalid)
    *  4) rrlib_serialization is available and both objects are serialized to the same binary data (usually they are equal then)
    */
-  virtual bool Equals(const tGenericObject& other)
-  {
-    if (wrapped == other.wrapped)
-    {
-      return true;
-    }
-    else if (GetType() == other.GetType())
-    {
-      bool cmp = (type.GetTypeTraits() & trait_flags::cHAS_TRIVIAL_DESTRUCTOR) && memcmp(wrapped, other.wrapped, GetType().GetSize()) == 0;
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-      return cmp || serialization::SerializationEquals(*this, other);
-#else
-      return cmp;
-#endif
-    }
-    return false;
-  }
+  virtual bool Equals(const tGenericObject& other) = 0;
 
   /*!
    * \return Wrapped object (type T must match original type)
@@ -166,9 +150,73 @@ public:
     return wrapped;
   }
 
+#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
+
+  // Generic serialization
+  virtual void Deserialize(serialization::tInputStream& stream) = 0;
+  virtual void Deserialize(serialization::tStringInputStream& stream) = 0;
+  virtual void Deserialize(const xml::tNode& node) = 0;
+  virtual void Serialize(serialization::tOutputStream& stream) const = 0;
+  virtual void Serialize(serialization::tStringOutputStream& stream) const = 0;
+  virtual void Serialize(xml::tNode& node) const = 0;
+
+  /*!
+   * Deserialize data from binary input stream - possibly using non-binary encoding.
+   *
+   * \param is Binary input stream
+   * \param enc Encoding to use
+   */
+  void Deserialize(serialization::tInputStream& stream, serialization::tDataEncoding enc);
+
+  /*!
+   * Serialize data to binary output stream - possibly using non-binary encoding.
+   *
+   * \param os Binary output stream
+   * \param enc Encoding to use
+   */
+  void Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding enc) const;
+
+#endif
+
+//----------------------------------------------------------------------
+// Protected fields and constructors
+//----------------------------------------------------------------------
+protected:
+
+  /*! Wrapped object */
+  void* wrapped;
+
+
+  /*!
+   * \param wrapped Wrapped object
+   * \param dt Data Type of wrapped object
+   */
+  tGenericObject(tType dt) :
+    wrapped()
+  {
+    this->type = dt;
+  }
+
+//----------------------------------------------------------------------
+// Private fields and methods
+//----------------------------------------------------------------------
+private:
+
+  /*!
+   * Deep copy source object to this object
+   * (types MUST match)
+   *
+   * \param source Source object
+   */
+  virtual void DeepCopyFrom(const void* source, tFactory* f) = 0;
+
 };
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__tGenericObject_h__
+
+#endif

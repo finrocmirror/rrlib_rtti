@@ -34,7 +34,7 @@
 
 #include "rrlib/rtti/tType.h"
 #include "rrlib/rtti/tFactory.h"
-#include <boost/utility.hpp>
+#include "rrlib/util/tNoncopyable.h"
 #include <memory>
 
 namespace rrlib
@@ -49,7 +49,7 @@ class tGenericObject;
  * Default factory implementation.
  * Simply allocates and deletes objects as needed on Heap.
  */
-class tDefaultFactory : public boost::noncopyable, public tFactory
+class tDefaultFactory : public tFactory, private util::tNoncopyable
 {
 public:
 

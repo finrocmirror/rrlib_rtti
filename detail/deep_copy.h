@@ -58,12 +58,6 @@ struct tFactoryWrapper
   tFactoryWrapper(rtti::tFactory* f) : factory(f) {}
 };
 
-struct tSerializableWrapper
-{
-  serialization::tSerializable* s;
-  tSerializableWrapper(serialization::tSerializable& f) : s(&f) {}
-};
-
 // if copyFrom is defined, take this
 template <typename T>
 inline void DeepCopy(const T& t, T& t2, rtti::tFactory* f, decltype(((T*)NULL)->CopyFrom(*((T*)NULL)))* = NULL)
@@ -104,7 +98,7 @@ struct tCopyImpl<T, true>
 template <typename T>
 inline void DeepCopy(const T& t, T& t2, tFactoryWrapper f)
 {
-  tCopyImpl<T, std::is_base_of<boost::noncopyable, T>::value>::DeepCopyImpl(t, t2, f.factory);
+  tCopyImpl<T, std::is_base_of<util::tNoncopyable, T>::value>::DeepCopyImpl(t, t2, f.factory);
 }
 
 template <typename T>

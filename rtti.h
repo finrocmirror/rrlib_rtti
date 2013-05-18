@@ -74,7 +74,7 @@ std::string GetBinaryCurrentlyPerformingStaticInitialization();
 template <typename T>
 void ResizeVector(std::vector<T>& vector, size_t new_size)
 {
-  detail::tResize < std::vector<T>, T, !std::is_base_of<boost::noncopyable, T>::value >::Resize(vector, new_size);
+  detail::tResize < std::vector<T>, T, !std::is_base_of<util::tNoncopyable, T>::value >::Resize(vector, new_size);
 }
 
 } // namespace

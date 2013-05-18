@@ -34,9 +34,6 @@
 
 #include "rrlib/rtti/tType.h"
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-#include "rrlib/serialization/tSerializable.h"
-#endif
 
 namespace rrlib
 {
@@ -52,9 +49,6 @@ namespace rtti
  * streams.
  */
 class tTypedObject
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-  : public serialization::tSerializable
-#endif
 {
 protected:
 

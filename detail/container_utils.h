@@ -97,9 +97,9 @@ struct tSimpleContainerCopy<C, true>
 template <typename C, typename T>
 void CopySTLContainer(const C& src, C& dest, rtti::tFactory* f)
 {
-  if (std::is_base_of<boost::noncopyable, T>::value)
+  if (std::is_base_of<util::tNoncopyable, T>::value)
   {
-    detail::tResize < C, T, !std::is_base_of<boost::noncopyable, T>::value >::Resize(dest, src.size());
+    detail::tResize < C, T, !std::is_base_of<util::tNoncopyable, T>::value >::Resize(dest, src.size());
 
     for (size_t i = 0; i < src.size(); i++)
     {
@@ -108,7 +108,7 @@ void CopySTLContainer(const C& src, C& dest, rtti::tFactory* f)
   }
   else
   {
-    tSimpleContainerCopy<C, std::is_base_of<boost::noncopyable, T>::value>::Copy(src, dest);
+    tSimpleContainerCopy<C, std::is_base_of<util::tNoncopyable, T>::value>::Copy(src, dest);
   }
 }
 

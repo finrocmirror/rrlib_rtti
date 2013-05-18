@@ -41,7 +41,7 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include <boost/noncopyable.hpp>
+#include "rrlib/util/tNoncopyable.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -69,7 +69,7 @@ namespace rtti
  * An instance can only be added to one type and will be deleted
  * by/with this type.
  */
-class tTypeAnnotation : public boost::noncopyable
+class tTypeAnnotation : private util::tNoncopyable
 {
 
 //----------------------------------------------------------------------
