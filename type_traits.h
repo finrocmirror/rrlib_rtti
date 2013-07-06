@@ -85,11 +85,7 @@ struct tTypeTraitsVector
 
   // Bit vector for type
   static const int value =
-#if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6))
     (std::has_trivial_copy_assign<T>::value ? trait_flags::cHAS_TRIVIAL_ASSIGN : 0) |
-#else
-    (std::has_trivial_assign<T>::value ? trait_flags::cHAS_TRIVIAL_ASSIGN : 0) |
-#endif
     (std::has_trivial_copy_constructor<T>::value ? trait_flags::cHAS_TRIVIAL_COPY_CONSTRUCTOR : 0) |
     (std::has_trivial_destructor<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
     (std::has_virtual_destructor<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
