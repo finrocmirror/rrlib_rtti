@@ -173,7 +173,11 @@ public:
   void DeepCopy(const void* source, void* destination, tFactory* factory = NULL) const;
 
   /*!
-   * Lookup data type by name
+   * Lookup data type by name.
+   *
+   * If a match with the complete namespace cannot be found, then
+   * 1) if 'name' does not contain a namespace, any type with the same name including a namespace will be returned as a match
+   * 2) if 'name' contains a namespace, a type with the same name but without namespace will be returned as a match
    *
    * \param name Data Type name
    * \return Data type with specified name (== NULL if it could not be found)
@@ -209,12 +213,15 @@ public:
   }
 
   /*!
-   * Get uniform data type name from rtti type name
+   * Obtain type name in rrlib::rtti format
+   * (no 't' prefixes; '.' instead of '::' for namespace separation; e.g. "rrlib.distance_data.DistanceData")
+   * from rtti type name.
    *
-   * \param rtti mangled rtti type name
-   * \return Uniform data type name
+   * \param rtti Mangled rtti type name
+   * \param remove_namespaces Remove namespaces from type names? (should only be used if name collisions are not an issue or cannot occur)
+   * \return (Demangled) type name in rrlib::rtti format
    */
-  static std::string GetDataTypeNameFromRtti(const char* rtti);
+  static std::string GetTypeNameFromRtti(const char* rtti, bool remove_namespaces = false);
 
   /*!
    * \return In case of list: type of elements
@@ -391,6 +398,9 @@ protected:
     /*! Name of data type */
     std::string name;
 
+    /*! Short name of data type */
+    std::string short_name;
+
     /*! RTTI name */
     const char* rtti_name;
 
@@ -531,6 +541,12 @@ private:
     }
     return valid;
   }
+
+  /*!
+   * \param type_name Type name (in rrlib::rtti) format
+   * \param The same type name without any namespaces (e.g. returns 'Pose2D' for 'rrlib.math.Pose2D')
+   */
+  static std::string RemoveNamespaces(const std::string& type_name);
 
 };
 

@@ -62,7 +62,7 @@ struct tListInfo
   typedef tNothing tElementType;
   static std::string GetName()
   {
-    return tType::GetDataTypeNameFromRtti(typeid(T).name());
+    return tType::GetTypeNameFromRtti(typeid(T).name());
   }
 };
 

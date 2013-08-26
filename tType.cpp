@@ -126,6 +126,11 @@ tType::tType(tType::tInfo* info) :
     info->new_info = false;
     RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Adding data type ", GetName());
 
+    if (info->short_name.length() == 0)
+    {
+      info->short_name = RemoveNamespaces(info->name);
+    }
+
     info->Init();
   }
 }
@@ -206,6 +211,21 @@ tType tType::FindType(const std::string& name)
     }
   }
 
+  if (name.find('.') != std::string::npos) // namespaces in specified name
+  {
+    return FindType(RemoveNamespaces(name));
+  }
+  else // no namespace in specified name
+  {
+    for (auto it = internal::GetTypes().begin(); it != internal::GetTypes().end(); ++it)
+    {
+      if (name.compare(it->info->short_name) == 0)
+      {
+        return *it;
+      }
+    }
+  }
+
   return tType();
 }
 
@@ -221,52 +241,45 @@ tType tType::FindTypeByRtti(const char* rtti_name)
   return tType();
 }
 
-std::string tType::GetDataTypeNameFromRtti(const char* rtti)
+std::string tType::GetTypeNameFromRtti(const char* rtti, bool remove_namespaces)
 {
   std::string demangled = Demangle(rtti);
 
-  // remove ::
-  long int last_pos = -1;
-  for (long int i = demangled.size() - 1; i >= 0; i--)
-  {
-    char c = demangled[i];
-    if (last_pos == -1)
-    {
-      if (c == ':')
-      {
-        last_pos = i + 1;
 
-        // possibly cut off s or t prefix
-        if (islower(demangled[last_pos]) && isupper(demangled[last_pos + 1]))
-        {
-          last_pos++;
-        }
+  bool word_start = true;
+  char name[demangled.size() + 1];
+  char* name_ptr = name;
+  memset(name, 0, demangled.size() + 1);
+
+  for (size_t i = 0; i < demangled.size(); i++)
+  {
+    if (i + 1 < demangled.size())
+    {
+      if (demangled[i] == ':' && demangled[i + 1] == ':')
+      {
+        *name_ptr = '.';
+        name_ptr++;
+        i++;
+        word_start = true;
+        continue;
+      }
+      if (word_start && islower(demangled[i]) && isupper(demangled[i + 1]))
+      {
+        i++;
       }
     }
-    else
-    {
-      if ((!isalnum(c)) && c != ':' && c != '_')
-      {
-        // ok, cut off here
-        demangled = demangled.substr(0, i + 1) + demangled.substr(last_pos, demangled.size() - last_pos);
-        last_pos = -1;
-      }
-    }
+
+    *name_ptr = demangled[i];
+    name_ptr++;
+    word_start = !isalnum(demangled[i]);
   }
 
-  // ok, cut off rest
-  if (last_pos > 0)
+  if (remove_namespaces)
   {
-    demangled = demangled.substr(last_pos, demangled.size() - last_pos);
+    return RemoveNamespaces(name);
   }
 
-  // possibly cut off s or t prefix
-  if (islower(demangled[0]) && isupper(demangled[1]))
-  {
-    demangled.erase(0, 1);
-  }
-
-  return demangled;
+  return name;
 }
 
 tType tType::GetType(int16_t uid)
@@ -283,9 +296,39 @@ uint16_t tType::GetTypeCount()
   return static_cast<uint16_t>(internal::GetTypes().size());
 }
 
+std::string tType::RemoveNamespaces(const std::string& type_name)
+{
+  char result[type_name.length() + 1];
+  char* result_ptr = &result[type_name.length()];
+  memset(result, 0, type_name.length() + 1);
+  bool in_namespace = false;
+
+  for (auto it = type_name.rbegin(); it != type_name.rend(); ++it)
+  {
+    if (*it == '.')
+    {
+      in_namespace = true;
+    }
+    if (*it == ',' || *it == '<' || *it == ' ')
+    {
+      in_namespace = false;
+    }
+    if (!in_namespace)
+    {
+      result_ptr--;
+      assert(result_ptr >= result);
+      *result_ptr = *it;
+    }
+  }
+
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_2, "Input: ", type_name, " Output: ", result_ptr);
+  return result_ptr;
+}
+
 tType::tInfo::tInfo() :
   type(tClassification::UNKNOWN),
   name(),
+  short_name(),
   rtti_name(NULL),
   size(0),
   generic_object_size(0),
@@ -332,14 +375,17 @@ void tType::tInfo::SetName(const std::string& new_name)
 
   default_name = false;
   name = new_name;
+  short_name = RemoveNamespaces(name);
 
   if (list_type != NULL)
   {
     list_type->name = std::string("List<") + name + ">";
+    list_type->short_name = RemoveNamespaces(list_type->name);
   }
   if (shared_ptr_list_type != NULL)
   {
     shared_ptr_list_type->name = std::string("List<") + name + "*>";
+    shared_ptr_list_type->short_name = RemoveNamespaces(shared_ptr_list_type->name);
   }
 }
 
