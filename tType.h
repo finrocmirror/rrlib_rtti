@@ -256,12 +256,13 @@ public:
   }
 
   /*!
+   * \param without_namespace Return name of data type without any namespaces?
    * \return Name of data type
    */
-  inline const std::string& GetName() const
+  inline const std::string& GetName(bool without_namespace = false) const
   {
     static const std::string null_type_string = "NULL";
-    return info ? info->name : null_type_string;
+    return info ? (without_namespace ? info->short_name : info->name) : null_type_string;
   }
 
   /*!
