@@ -55,6 +55,8 @@ template class tDataType<std::string>;
 template class tDataType<rrlib::time::tTimestamp>;
 template class tDataType<rrlib::time::tDuration>;
 
+static tDataType<std::string> cSTRING_TYPE("String"); // Make sure std::string data type has name "String" - as in Java
+
 } // namespace rrlib
 } // namespace rtti
 
