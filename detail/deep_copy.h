@@ -79,7 +79,11 @@ struct tCopyImpl<T, true>
 {
   inline static void DeepCopyImpl(const T& src, T& dest, rtti::tFactory* f)
   {
+#if __GNUC__ == 4 && __GNUC_MINOR__ >= 8
+    if (std::is_trivially_destructible<T>::value)
+#else
     if (std::has_trivial_destructor<T>::value)
+#endif
     {
       memcpy(&dest, &src, sizeof(T)); // (heuristic, however, I have never encountered a type where this is invalid)
     }
