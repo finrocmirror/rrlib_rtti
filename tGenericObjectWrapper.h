@@ -44,7 +44,7 @@ namespace rtti
  *
  * Allows wrapping any object as GenericObject
  */
-template < typename T >
+template <typename T>
 class tGenericObjectWrapper : public detail::tGenericObjectBaseImpl<T>
 {
 

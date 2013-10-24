@@ -46,38 +46,38 @@ namespace rtti
  * This class should only be instantiated by tDataType !
  */
 template<typename T, bool NO_ARG_CONSTRUCTOR = std::is_base_of<sDefaultStaticTypeInfo, sStaticTypeInfo<T>>::value>
-    class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
-    {
-      public:
-      tGenericObjectInstance() :
-        detail::tGenericObjectBaseImpl<T>(),
-        wrapped_object(sStaticTypeInfo<T>::CreateByValue())
+class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
 {
-  tGenericObject::wrapped = &wrapped_object;
-}
+public:
+  tGenericObjectInstance() :
+    detail::tGenericObjectBaseImpl<T>(),
+    wrapped_object(sStaticTypeInfo<T>::CreateByValue())
+  {
+    tGenericObject::wrapped = &wrapped_object;
+  }
 
 private:
 
-/*! Wrapped object */
-T wrapped_object;
+  /*! Wrapped object */
+  T wrapped_object;
 
-    };
+};
 
 template<typename T>
 class tGenericObjectInstance<T, true> : public detail::tGenericObjectBaseImpl<T>
 {
-  public:
+public:
   tGenericObjectInstance() :
     detail::tGenericObjectBaseImpl<T>(),
     wrapped_object()
-{
-  tGenericObject::wrapped = &wrapped_object;
-}
+  {
+    tGenericObject::wrapped = &wrapped_object;
+  }
 
 private:
 
-/*! Wrapped object */
-T wrapped_object;
+  /*! Wrapped object */
+  T wrapped_object;
 
 };
 

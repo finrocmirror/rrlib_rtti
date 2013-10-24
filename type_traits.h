@@ -117,10 +117,10 @@ struct tTypeTraitsVector
 template <typename T>
 struct tHasLessThanOperator
 {
-  template < typename U >
+  template <typename U>
   static U &Make();
 
-  template < typename U = T >
+  template <typename U = T>
   static int16_t Test(decltype(Make<U>() < Make<U>()));
 
   static int32_t Test(...);
@@ -134,10 +134,10 @@ struct tHasLessThanOperator
 template <typename T>
 struct tHasEqualToOperator
 {
-  template < typename U >
+  template <typename U>
   static U &Make();
 
-  template < typename U = T >
+  template <typename U = T>
   static int16_t Test(decltype(Make<U>() == Make<U>()));
 
   static int32_t Test(...);

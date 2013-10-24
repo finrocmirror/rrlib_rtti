@@ -58,7 +58,7 @@ struct tListInfo
 {
   static const tType::tClassification type = tType::tClassification::PLAIN;
   typedef std::vector<T> tListType;
-  typedef std::vector<std::shared_ptr<T> > tSharedPtrListType;
+  typedef std::vector<std::shared_ptr<T>> tSharedPtrListType;
   typedef tNothing tElementType;
   static std::string GetName()
   {
@@ -80,7 +80,7 @@ struct tListInfoBase
 };
 
 template <typename T>
-struct tListInfoBase<std::shared_ptr<T> >
+struct tListInfoBase<std::shared_ptr<T>>
 {
   static const tType::tClassification type = tType::tClassification::PTR_LIST;
   typedef tNothing tListType;
