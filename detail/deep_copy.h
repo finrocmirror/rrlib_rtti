@@ -79,7 +79,7 @@ struct tCopyImpl<T, true>
 {
   inline static void DeepCopyImpl(const T& src, T& dest, rtti::tFactory* f)
   {
-    if (std::has_trivial_destructor<T>::value)
+    if (std::is_trivially_destructible<T>::value)
     {
       memcpy(&dest, &src, sizeof(T)); // (heuristic, however, I have never encountered a type where this is invalid)
     }

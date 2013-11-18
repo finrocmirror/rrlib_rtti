@@ -71,7 +71,7 @@ protected:
     {
       return true;
     }
-    if (std::has_trivial_destructor<T>::value)
+    if (std::is_trivially_destructible<T>::value)
     {
       return GetType() == other.GetType() && memcmp(GetRawDataPointer(), other.GetRawDataPointer(), GetType().GetSize()) == 0;
     }

@@ -87,8 +87,8 @@ struct tTypeTraitsVector
   static const int value =
     (std::has_trivial_copy_assign<T>::value ? trait_flags::cHAS_TRIVIAL_ASSIGN : 0) |
     (std::has_trivial_copy_constructor<T>::value ? trait_flags::cHAS_TRIVIAL_COPY_CONSTRUCTOR : 0) |
-    (std::has_trivial_destructor<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
-    (std::has_virtual_destructor<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
+    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
+    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
     (std::is_abstract<T>::value ? trait_flags::cIS_ABSTRACT : 0) |
     (std::is_arithmetic<T>::value ? trait_flags::cIS_ARITHMETIC : 0) |
     (std::is_array<T>::value ? trait_flags::cIS_ARRAY : 0) |
