@@ -71,10 +71,10 @@ protected:
     {
       return true;
     }
-#if __GNUC__ == 4 && __GNUC_MINOR__ >= 8
-    if (std::is_trivially_destructible<T>::value)
-#else
+#if (! __clang__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8))
     if (std::has_trivial_destructor<T>::value)
+#else
+    if (std::is_trivially_destructible<T>::value)
 #endif
     {
       return GetType() == other.GetType() && memcmp(GetRawDataPointer(), other.GetRawDataPointer(), GetType().GetSize()) == 0;
