@@ -34,6 +34,7 @@
 //----------------------------------------------------------------------
 #include <mutex>
 #include "rrlib/logging/messages.h"
+#include "rrlib/util/demangle.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -243,8 +244,7 @@ tType tType::FindTypeByRtti(const char* rtti_name)
 
 std::string tType::GetTypeNameFromRtti(const char* rtti, bool remove_namespaces)
 {
-  std::string demangled = Demangle(rtti);
-
+  std::string demangled = util::Demangle(rtti);
 
   bool word_start = true;
   char name[demangled.size() + 1];

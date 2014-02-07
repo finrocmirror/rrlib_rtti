@@ -36,15 +36,6 @@ namespace rrlib
 namespace rtti
 {
 
-std::string Demangle(const char* mangled)
-{
-  int status = 0;
-  char* tmp = abi::__cxa_demangle(mangled, 0, 0, &status);
-  std::string result(tmp);
-  free(tmp);
-  return result;
-}
-
 static std::string GetSoFile(const std::string& backtrace_entry)
 {
   return backtrace_entry.substr(0, backtrace_entry.find('('));

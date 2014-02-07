@@ -55,12 +55,6 @@ namespace rtti
 {
 
 /*!
- * \param mangled Mangled type name as returned by RTTI
- * \return Demangled type name
- */
-std::string Demangle(const char* mangled);
-
-/*!
  * \return If a .so-file currently performs static initializations - returns name of .so file
  */
 std::string GetBinaryCurrentlyPerformingStaticInitialization();
