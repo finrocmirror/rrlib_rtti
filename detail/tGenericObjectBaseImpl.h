@@ -65,7 +65,7 @@ protected:
 
   tGenericObjectBaseImplEq() : tGenericObject(tDataType<T>()) {}
 
-  virtual bool Equals(const tGenericObject& other)
+  virtual bool Equals(const tGenericObject& other) override
   {
     if (this->GetRawDataPointer() == other.GetRawDataPointer())
     {
@@ -92,7 +92,7 @@ protected:
 
   tGenericObjectBaseImplEq() : tGenericObject(tDataType<T>()) {}
 
-  virtual bool Equals(const tGenericObject& other)
+  virtual bool Equals(const tGenericObject& other) override
   {
     return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && (GetData<T>() == other.GetData<T>()));
   }
@@ -109,14 +109,14 @@ protected:
     tGenericObjectBaseImplEq<T, sStaticTypeInfo<T>::valid_equal_to_operator>()
   {}
 
-  virtual void DeepCopyFrom(const void* source, tFactory* f)
+  virtual void DeepCopyFrom(const void* source, tFactory* f) override
   {
     DeepCopyFromImpl(*static_cast<const T*>(source), f);
   }
 
 public:
 
-  virtual void Clear()
+  virtual void Clear() override
   {
     sStaticTypeInfo<T>::Clear(tGenericObject::GetData<T>());
   }
@@ -133,32 +133,32 @@ public:
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 
-  virtual void Deserialize(serialization::tInputStream& is)
+  virtual void Deserialize(serialization::tInputStream& is) override
   {
     serialization::Deserialize(is, tGenericObject::GetData<T>());
   }
 
-  virtual void Deserialize(serialization::tStringInputStream& is)
+  virtual void Deserialize(serialization::tStringInputStream& is) override
   {
     serialization::Deserialize(is, tGenericObject::GetData<T>());
   }
 
-  virtual void Deserialize(const xml::tNode& node)
+  virtual void Deserialize(const xml::tNode& node) override
   {
     serialization::Deserialize(node, tGenericObject::GetData<T>());
   }
 
-  virtual void Serialize(serialization::tOutputStream& os) const
+  virtual void Serialize(serialization::tOutputStream& os) const override
   {
     serialization::Serialize(os, tGenericObject::GetData<T>());
   }
 
-  virtual void Serialize(serialization::tStringOutputStream& os) const
+  virtual void Serialize(serialization::tStringOutputStream& os) const override
   {
     serialization::Serialize(os, tGenericObject::GetData<T>());
   }
 
-  virtual void Serialize(xml::tNode& node) const
+  virtual void Serialize(xml::tNode& node) const override
   {
     serialization::Serialize(node, tGenericObject::GetData<T>());
   }

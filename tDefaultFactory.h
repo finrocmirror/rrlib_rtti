@@ -56,12 +56,12 @@ public:
   tDefaultFactory() {}
   virtual ~tDefaultFactory() {}
 
-  virtual std::shared_ptr<void> CreateBuffer(const tType& dt)
+  virtual std::shared_ptr<void> CreateBuffer(const tType& dt) override
   {
     return std::shared_ptr<void>(dt.CreateInstance());
   }
 
-  virtual tGenericObject* CreateGenericObject(const tType& dt, void* custom_parameter)
+  virtual tGenericObject* CreateGenericObject(const tType& dt, void* custom_parameter) override
   {
     return dt.CreateInstanceGeneric();
   }

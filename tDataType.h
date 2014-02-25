@@ -95,7 +95,7 @@ class tDataType : public tType
       return NULL;
     }
 
-    virtual void Init()
+    virtual void Init() override
     {
       if (type == tClassification::PLAIN)
       {
@@ -108,7 +108,7 @@ class tDataType : public tType
       }
     }
 
-    virtual void* CreateInstance(void* placement) const
+    virtual void* CreateInstance(void* placement) const override
     {
       if (placement == NULL)
       {
@@ -118,15 +118,15 @@ class tDataType : public tType
       return sStaticTypeInfo<T>::Create(placement);
     }
 
-    virtual tGenericObject* CreateInstanceGeneric(void* placement) const;
+    virtual tGenericObject* CreateInstanceGeneric(void* placement) const override;
 
-    virtual void DeepCopy(const void* src, void* dest, tFactory* f) const;
+    virtual void DeepCopy(const void* src, void* dest, tFactory* f) const override;
 
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 
-    virtual void Deserialize(serialization::tInputStream& is, void* obj) const;
+    virtual void Deserialize(serialization::tInputStream& is, void* obj) const override;
 
-    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const;
+    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const override;
 
 #endif
 
