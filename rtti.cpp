@@ -28,7 +28,6 @@
  */
 //----------------------------------------------------------------------
 #include "rrlib/rtti/rtti.h"
-#include <cxxabi.h>
 #include <execinfo.h>
 
 namespace rrlib
