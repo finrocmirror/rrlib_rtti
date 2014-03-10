@@ -145,6 +145,14 @@ public:
   /*!
    * Raw void pointer to wrapped object
    */
+  inline void* GetRawDataPointer()
+  {
+    return wrapped;
+  }
+
+  /*!
+   * Raw void pointer to wrapped object
+   */
   inline const void* GetRawDataPointer() const
   {
     return wrapped;
