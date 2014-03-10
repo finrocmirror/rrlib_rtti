@@ -58,7 +58,8 @@ public:
 
   virtual std::shared_ptr<void> CreateBuffer(const tType& dt) override
   {
-    return std::shared_ptr<void>(dt.CreateInstance());
+    std::shared_ptr<tGenericObject> generic_object_pointer(dt.CreateInstanceGeneric()); // TODO: if this feature is heavily used, we could create a variant that avoids the two-pointer overhead from tGenericObjectInstance
+    return std::shared_ptr<void>(generic_object_pointer, generic_object_pointer->GetRawDataPointer());
   }
 
   virtual tGenericObject* CreateGenericObject(const tType& dt, void* custom_parameter) override
