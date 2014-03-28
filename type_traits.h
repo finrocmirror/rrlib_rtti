@@ -225,7 +225,7 @@ struct GenericOperationsContainer
   template <typename TContainer>
   static bool Equals(const TContainer& object1, const TContainer& object2)
   {
-    return std::equal(object1.begin(), object1.end(), object2.begin(), GenericOperations<T>::Equals);
+    return std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
   }
 };
 
@@ -275,6 +275,11 @@ struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T
 
 template <typename T>
 struct GenericOperations : GenericOperationsDefault<T>
+{
+};
+
+template <>
+struct GenericOperations<std::string> : GenericOperationsDefault<std::string, false>
 {
 };
 
