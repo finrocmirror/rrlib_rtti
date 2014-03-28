@@ -117,6 +117,7 @@ private:
   template <typename T>
   void TestGenericOperations(T& t)
   {
+    static_assert(rrlib::serialization::IsBinarySerializable<T>::value, "Trait not correctly implemented");
     tGenericObjectWrapper<T> wrapper(t);
     tGenericObject* copy = wrapper.GetType().CreateInstanceGeneric();
     copy->DeepCopyFrom(wrapper);
@@ -127,11 +128,14 @@ private:
   {
     typedef serialization::tMemoryBuffer tBuffer;
     int i = 3;
-    TestGenericOperations<int>(i);
+    TestGenericOperations(i);
     std::string test_string = " test\nstring ";
-    TestGenericOperations<std::string>(test_string);
+    TestGenericOperations(test_string);
     std::vector<int> test_vector = { 7, 8, 9 };
-    TestGenericOperations<std::vector<int>>(test_vector);
+    TestGenericOperations(test_vector);
+    std::vector<bool> test_vector_bool = { false, true, true };
+    TestGenericOperations(test_vector_bool);
+
     tBuffer buffer;
     serialization::tOutputStream stream(buffer);
     for (int i = 0; i < 20000; i++)
@@ -139,11 +143,11 @@ private:
       stream.WriteInt(i);
     }
     stream.Close();
-    TestGenericOperations<tBuffer>(buffer);
+    TestGenericOperations(buffer);
     std::map<size_t, tBuffer> m;
     m[1] = std::move(buffer);
     m[3] = tBuffer();
-    TestGenericOperations<std::map<size_t, tBuffer>>(m);
+    TestGenericOperations(m);
   }
 };
 
