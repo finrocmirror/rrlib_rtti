@@ -40,8 +40,6 @@ namespace rrlib
 namespace rtti
 {
 /*!
- * \author Max Reichardt
- *
  * Allows wrapping any object as GenericObject
  */
 template <typename T>

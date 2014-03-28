@@ -158,8 +158,6 @@ public:
     return wrapped;
   }
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
   // Generic serialization
   virtual void Deserialize(serialization::tInputStream& stream) = 0;
   virtual void Deserialize(serialization::tStringInputStream& stream) = 0;
@@ -183,8 +181,6 @@ public:
    * \param enc Encoding to use
    */
   void Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding enc) const;
-
-#endif
 
 //----------------------------------------------------------------------
 // Protected fields and constructors

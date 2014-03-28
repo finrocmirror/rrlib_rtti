@@ -66,7 +66,6 @@ namespace rrlib
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 namespace serialization
 {
 class tInputStream;
@@ -74,7 +73,6 @@ class tOutputStream;
 class tStringInputStream;
 class tStringOutputStream;
 }
-#endif
 
 namespace rtti
 {
@@ -135,19 +133,6 @@ public:
   inline void AddAnnotation(T* annotation)
   {
     AddAnnotationImplementation(annotation, AnnotationIndexValid<T>, tAnnotationIndex<T>::index);
-  }
-
-  /*!
-   * \param placement (Optional) Destination for placement new (needs to have at least size GetSize())
-   * \return Instance of data type T casted to void*
-   */
-  void* CreateInstance(void* placement = NULL) const
-  {
-    if (info)
-    {
-      info->CreateInstance(placement);
-    }
-    return NULL;
   }
 
   /*!
@@ -365,8 +350,6 @@ public:
     return info < other.info;
   }
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
   /*!
    * Deserialize object from input stream
    *
@@ -382,8 +365,6 @@ public:
    * \param obj Object to serialize
    */
   void Serialize(serialization::tOutputStream& os, const void* obj) const;
-
-#endif
 
 //----------------------------------------------------------------------
 // Protected information class
@@ -451,15 +432,6 @@ protected:
 
     /*!
      * \param placement (Optional) Destination for placement new
-     * \return Instance of Datatype T casted to void*
-     */
-    virtual void* CreateInstance(void* placement = NULL) const
-    {
-      return NULL;
-    }
-
-    /*!
-     * \param placement (Optional) Destination for placement new
      * \param manager_size Size of management info
      * \return Instance of Datatype as Generic object
      */
@@ -479,8 +451,6 @@ protected:
 
     virtual void Init() {}
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
     /*!
      * Deserialize object from input stream
      *
@@ -496,8 +466,6 @@ protected:
      * \param obj Object to serialize
      */
     virtual void Serialize(serialization::tOutputStream& os, const void* obj) const;
-
-#endif
 
     /*!
      * Set name of data type
@@ -554,14 +522,10 @@ private:
 template <typename T>
 int tType::tAnnotationIndex<T>::index;
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& dt);
 serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& dt);
 serialization::tStringOutputStream& operator << (serialization::tStringOutputStream& stream, const tType& dt);
 serialization::tStringInputStream& operator >> (serialization::tStringInputStream& stream, tType& dt);
-
-#endif
 
 //----------------------------------------------------------------------
 // End of namespace declaration

@@ -35,9 +35,7 @@ namespace rtti
 {
 
 // some explicit template instantiations
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 template class tDataType<serialization::tMemoryBuffer>;
-#endif
 template class tDataType<int8_t>;
 template class tDataType<int16_t>;
 template class tDataType<int>;

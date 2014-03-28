@@ -39,19 +39,17 @@ namespace rrlib
 namespace rtti
 {
 /*!
- * \author Max Reichardt
- *
  * Used for initially creating/instantiating GenericObject.
  *
  * This class should only be instantiated by tDataType !
  */
-template<typename T, bool NO_ARG_CONSTRUCTOR = std::is_base_of<sDefaultStaticTypeInfo, sStaticTypeInfo<T>>::value>
+template<typename T, bool NO_ARG_CONSTRUCTOR = std::is_base_of<serialization::DefaultImplementation, serialization::DefaultInstantiation<T>>::value>
 class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
 {
 public:
   tGenericObjectInstance() :
     detail::tGenericObjectBaseImpl<T>(),
-    wrapped_object(sStaticTypeInfo<T>::CreateByValue())
+    wrapped_object(serialization::DefaultInstantiation<T>::Create())
   {
     tGenericObject::wrapped = &wrapped_object;
   }
@@ -78,7 +76,6 @@ private:
 
   /*! Wrapped object */
   T wrapped_object;
-
 };
 
 } // namespace

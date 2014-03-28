@@ -66,8 +66,6 @@ namespace rtti
 // Implementation
 //----------------------------------------------------------------------
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
 void tGenericObject::Deserialize(serialization::tInputStream& stream, serialization::tDataEncoding enc)
 {
   if (enc == serialization::tDataEncoding::BINARY)
@@ -108,8 +106,6 @@ void tGenericObject::Serialize(serialization::tOutputStream& stream, serializati
     stream.WriteString(n.GetXMLDump(true));
   }
 }
-
-#endif
 
 //----------------------------------------------------------------------
 // End of namespace declaration

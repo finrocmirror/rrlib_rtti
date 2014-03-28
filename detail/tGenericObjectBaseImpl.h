@@ -32,11 +32,9 @@
 #ifndef __rrlib__rtti__tGenericObjectBaseImpl_h__
 #define __rrlib__rtti__tGenericObjectBaseImpl_h__
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 #include "rrlib/serialization/tStringInputStream.h"
 #include "rrlib/serialization/tStringOutputStream.h"
 #include "rrlib/serialization/type_traits.h"
-#endif
 
 #include "rrlib/rtti/tGenericObject.h"
 
@@ -57,56 +55,13 @@ class tFactory;
 namespace detail
 {
 
-template <typename T, bool EQ_OP>
-class tGenericObjectBaseImplEq : public tGenericObject
-{
-protected:
-  using tGenericObject::wrapped;
-
-  tGenericObjectBaseImplEq() : tGenericObject(tDataType<T>()) {}
-
-  virtual bool Equals(const tGenericObject& other) override
-  {
-    if (this->GetRawDataPointer() == other.GetRawDataPointer())
-    {
-      return true;
-    }
-    if (std::is_trivially_destructible<T>::value)
-    {
-      return GetType() == other.GetType() && memcmp(GetRawDataPointer(), other.GetRawDataPointer(), GetType().GetSize()) == 0;
-    }
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-    return GetType() == other.GetType() && serialization::SerializationEquals(GetData<T>(), other.GetData<T>());
-#else
-    return false;
-#endif
-  }
-};
-
-template <typename T>
-class tGenericObjectBaseImplEq<T, true> : public tGenericObject
-{
-protected:
-
-  using tGenericObject::wrapped;
-
-  tGenericObjectBaseImplEq() : tGenericObject(tDataType<T>()) {}
-
-  virtual bool Equals(const tGenericObject& other) override
-  {
-    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && (GetData<T>() == other.GetData<T>()));
-  }
-};
-
 template<typename T>
-class tGenericObjectBaseImpl : public tGenericObjectBaseImplEq<T, sStaticTypeInfo<T>::valid_equal_to_operator>
+class tGenericObjectBaseImpl : public tGenericObject
 {
 protected:
-
-  using tGenericObject::wrapped;
 
   tGenericObjectBaseImpl() :
-    tGenericObjectBaseImplEq<T, sStaticTypeInfo<T>::valid_equal_to_operator>()
+    tGenericObject(tDataType<T>())
   {}
 
   virtual void DeepCopyFrom(const void* source, tFactory* f) override
@@ -118,7 +73,12 @@ public:
 
   virtual void Clear() override
   {
-    sStaticTypeInfo<T>::Clear(tGenericObject::GetData<T>());
+    //TODO
+  }
+
+  virtual bool Equals(const tGenericObject& other) override
+  {
+    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && GenericOperations<T>::Equals(this->GetData<T>(), other.GetData<T>()));
   }
 
   /*!
@@ -128,10 +88,8 @@ public:
    */
   inline void DeepCopyFromImpl(const T& source, tFactory* f = NULL)
   {
-    sStaticTypeInfo<T>::DeepCopy(source, tGenericObject::GetData<T>(), f);
+    GenericOperations<T>::DeepCopy(source, this->GetData<T>());
   }
-
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 
   virtual void Deserialize(serialization::tInputStream& is) override
   {
@@ -162,8 +120,6 @@ public:
   {
     serialization::Serialize(node, tGenericObject::GetData<T>());
   }
-
-#endif
 };
 
 } // namespace

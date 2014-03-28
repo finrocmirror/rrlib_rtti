@@ -40,8 +40,6 @@ namespace rrlib
 namespace rtti
 {
 /*!
- * \author Max Reichardt
- *
  * This is the abstract base class for any object that has additional
  * type information as provided in this package.
  *

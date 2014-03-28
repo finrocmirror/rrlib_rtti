@@ -41,13 +41,11 @@ namespace rtti
 std::string GetBinaryCurrentlyPerformingStaticInitialization();
 
 template<typename T>
-tDataType<T>::tDataTypeInfo::tDataTypeInfo()
+tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase()
 {
-  type = detail::tListInfo<T>::type;
   rtti_name = typeid(T).name();
   size = sizeof(T);
   generic_object_size = sizeof(tGenericObjectInstance<T>);
-  name = detail::tListInfo<T>::GetName();
   type_traits = tTypeTraitsVector<T>::value;
   binary = GetBinaryCurrentlyPerformingStaticInitialization();
   if (binary.length() > 0)
@@ -62,7 +60,7 @@ tDataType<T>::tDataTypeInfo::tDataTypeInfo()
 }
 
 template<typename T>
-tGenericObject* tDataType<T>::tDataTypeInfo::CreateInstanceGeneric(void* placement) const
+tGenericObject* tDataType<T>::tDataTypeInfoBase::CreateInstanceGeneric(void* placement) const
 {
   if (placement == NULL)
   {
@@ -73,7 +71,7 @@ tGenericObject* tDataType<T>::tDataTypeInfo::CreateInstanceGeneric(void* placeme
 }
 
 template<typename T>
-void tDataType<T>::tDataTypeInfo::DeepCopy(const void* src, void* dest, tFactory* f) const
+void tDataType<T>::tDataTypeInfoBase::DeepCopy(const void* src, void* dest, tFactory* f) const
 {
   const T* s = static_cast<const T*>(src);
   T* d = static_cast<T*>(dest);
@@ -84,13 +82,11 @@ void tDataType<T>::tDataTypeInfo::DeepCopy(const void* src, void* dest, tFactory
     assert(typeid(*d).name() == typeid(T).name());
   }
 
-  sStaticTypeInfo<T>::DeepCopy(*s, *d, f);
+  GenericOperations<T>::DeepCopy(*s, *d);
 }
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
 template<typename T>
-void tDataType<T>::tDataTypeInfo::Deserialize(serialization::tInputStream& is, void* obj) const
+void tDataType<T>::tDataTypeInfoBase::Deserialize(serialization::tInputStream& is, void* obj) const
 {
   T* s = static_cast<T*>(obj);
   if (std::has_virtual_destructor<T>::value)
@@ -101,7 +97,7 @@ void tDataType<T>::tDataTypeInfo::Deserialize(serialization::tInputStream& is, v
 }
 
 template<typename T>
-void tDataType<T>::tDataTypeInfo::Serialize(serialization::tOutputStream& os, const void* obj) const
+void tDataType<T>::tDataTypeInfoBase::Serialize(serialization::tOutputStream& os, const void* obj) const
 {
   const T* s = static_cast<const T*>(obj);
   if (std::has_virtual_destructor<T>::value)
@@ -110,8 +106,6 @@ void tDataType<T>::tDataTypeInfo::Serialize(serialization::tOutputStream& os, co
   }
   serialization::Serialize(os, *s);
 }
-
-#endif
 
 } // namespace
 } // namespace

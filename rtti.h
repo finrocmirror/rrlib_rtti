@@ -27,27 +27,17 @@
  *
  * \brief
  *
+ * This is the standard include for using rrlib_rtti.
+ *
+ * It contains various useful functions.
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__rtti_h__
 #define __rrlib__rtti__rtti_h__
 
-#include "rrlib/rtti/tFactory.h"
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 #include "rrlib/serialization/serialization.h"
-#endif
-#include "rrlib/rtti/sStaticTypeInfo.h"
 #include "rrlib/rtti/tDataType.h"
-#include "rrlib/rtti/serialization_extension.h"
-#include "rrlib/rtti/detail/container_utils.h"
 
-/*!
- * \author Max Reichardt
- *
- * This is the standard include for using rrlib_rtti.
- *
- * It contains various useful functions.
- */
 
 namespace rrlib
 {
@@ -68,7 +58,7 @@ std::string GetBinaryCurrentlyPerformingStaticInitialization();
 template <typename T>
 void ResizeVector(std::vector<T>& vector, size_t new_size)
 {
-  detail::tResize < std::vector<T>, T, !std::is_base_of<util::tNoncopyable, T>::value >::Resize(vector, new_size);
+  serialization::ContainerResize<T>::Resize(vector, new_size);
 }
 
 } // namespace

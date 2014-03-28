@@ -10,4 +10,10 @@
     </sources>
   </rrlib>
 
+  <unittest name="traits_and_generic_operations">
+    <sources>
+      test/unit_test_rtti.cpp
+    </sources>
+  </unittest>
+
 </targets>

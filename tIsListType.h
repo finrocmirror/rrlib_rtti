@@ -39,8 +39,6 @@ namespace rtti
 {
 
 /*!
- * \author Max Reichardt
- *
  * By deriving from this class, it can be indicated whether a class is suitable for use in lists.
  * When this is indicated, list types are automatically instantiated when class is registered as data type.
  *

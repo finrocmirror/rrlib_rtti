@@ -27,6 +27,8 @@
  *
  * \brief
  *
+ * Various type traits required for rrlib_rtti.
+ * Most of them can be specialized.
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__type_traits_h__
@@ -34,14 +36,18 @@
 
 #include <type_traits>
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
 #include "rrlib/serialization/type_traits.h"
-#endif
+#include "rrlib/rtti/tIsListType.h"
+#include "rrlib/rtti/detail/generic_operations.h"
 
 namespace rrlib
 {
 namespace rtti
 {
+
+template <typename T>
+class tDataType;
+
 namespace trait_flags
 {
 
@@ -68,11 +74,9 @@ static const int cIS_SCALAR = 1 << 18;
 static const int cIS_SIGNED = 1 << 19;
 static const int cIS_UNSIGNED = 1 << 20;
 
-}
+} // namespace
 
 /*!
- * \author Max Reichardt
- *
  * Stores various type traits determined at compile time to bit vector
  * so that traits are available at runtime.
  *
@@ -104,18 +108,18 @@ struct tTypeTraitsVector
     (std::is_signed<T>::value ? trait_flags::cIS_SIGNED : 0) |
     (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0)
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-    | (serialization::tIsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
-    (serialization::tIsStringSerializable<T>::value ? trait_flags::cIS_STRING_SERIALIZABLE : 0) |
-    (serialization::tIsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0)
+    | (serialization::IsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
+    (serialization::IsStringSerializable<T>::value ? trait_flags::cIS_STRING_SERIALIZABLE : 0) |
+    (serialization::IsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0)
 #endif
     ;
 };
 
 /*!
- * This type-trait is used to determine whether a type supports operator '<' .
+ * This type trait is used to determine whether a type supports operator '<' .
  */
 template <typename T>
-struct tHasLessThanOperator
+struct HasLessThanOperator
 {
   template <typename U>
   static U &Make();
@@ -129,10 +133,10 @@ struct tHasLessThanOperator
 };
 
 /*!
- * This type-trait is used to determine whether a type supports operator '==' .
+ * This type trait is used to determine whether a type supports operator '==' .
  */
 template <typename T>
-struct tHasEqualToOperator
+struct HasEqualToOperator
 {
   template <typename U>
   static U &Make();
@@ -145,6 +149,159 @@ struct tHasEqualToOperator
   enum { value = sizeof(Test(true)) == sizeof(int16_t) };
 };
 
+/*!
+ * Type trait that defines whether an object of type T can be safely deep-copied
+ * using memcpy and whether equality can be tested using memcmp.
+ */
+template <typename T>
+struct SupportsBitwiseCopy
+{
+  // std::is_trivially_destructible<T> is a heuristic. However, I have never encountered a type where this is invalid.
+  enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) };
+};
+
+/*!
+ * This type trait defines various generic operations for objects of a type T.
+ * tGenericObject provides all these operations at runtime
+ * (with only runtime type information available)
+ *
+ * This trait may be specialized in order to use better (e.g. faster, accurate) operations for T.
+ */
+template <typename T>
+struct GenericOperations;
+
+/*!
+ * Base class with default implementation.
+ * Is a base class so that specializations may conveniently reuse parts of it.
+ */
+template <typename T, bool IS_CONTAINER = serialization::IsSerializableContainer<T>::value>
+struct GenericOperationsDefault
+{
+  /*!
+   * Create a deep copy of an object.
+   * A deep copy means that the destination object must not
+   * change if the source object is modified or deleted.
+   * Serialization of source and destination objects are equal after calling this.
+   *
+   * \param source Object to be copied
+   * \param destination Object to copy source object to
+   */
+  static void DeepCopy(const T& source, T& destination)
+  {
+    detail::DeepCopyOperation<T>::DeepCopy(source, destination);
+  }
+
+  /*!
+   * Returns whether two objects are equal.
+   * If T supports the '==' operator, this is typically used for the Equals operation.
+   * Serializing equal objects produces identical data.
+   *
+   * \param object1 First object to compare
+   * \param object2 Second object to compare
+   */
+  static bool Equals(const T& object1, const T& object2)
+  {
+    return detail::EqualsOperation<T>::Equals(object1, object2);
+  }
+};
+
+/*!
+ * Default implementation for STL containers with elements of type T
+ */
+template <typename T, bool MAP, bool SIMPLE = std::is_fundamental<T>::value>
+struct GenericOperationsContainer
+{
+  template <typename TContainer>
+  static void DeepCopy(const TContainer& source, TContainer& destination)
+  {
+    serialization::ContainerResize<T>::Resize(destination, source.size());
+    auto dest_it = destination.begin();
+    for (auto src_it = source.begin(); src_it != source.end(); ++src_it, ++dest_it)
+    {
+      GenericOperations<T>::DeepCopy(*src_it, *dest_it);
+    }
+  }
+
+  template <typename TContainer>
+  static bool Equals(const TContainer& object1, const TContainer& object2)
+  {
+    return std::equal(object1.begin(), object1.end(), object2.begin(), GenericOperations<T>::Equals);
+  }
+};
+
+template <typename T, bool MAP>
+struct GenericOperationsContainer<T, MAP, true>
+{
+  template <typename TContainer>
+  static void DeepCopy(const TContainer& source, TContainer& destination)
+  {
+    destination = source;
+  }
+
+  template <typename TContainer>
+  static bool Equals(const TContainer& object1, const TContainer& object2)
+  {
+    return object1 == object2;
+  }
+};
+
+// Map
+template <typename T>
+struct GenericOperationsContainer<T, true, false>
+{
+  template <typename TMap>
+  static void DeepCopy(const TMap& source, TMap& destination)
+  {
+    destination.clear();
+    for (auto it = source.begin(); it != source.end(); ++it)
+    {
+      typedef typename TMap::key_type tKey;
+      typedef typename TMap::mapped_type tMapped;
+      std::pair<tKey, tMapped> entry(it->first, serialization::DefaultInstantiation<tMapped>::Create());
+      GenericOperations<tMapped>::DeepCopy(it->second, entry.second);
+      destination.insert(std::move(entry));
+    }
+  }
+
+  template <typename TContainer>
+  static bool Equals(const TContainer& object1, const TContainer& object2)
+  {
+    return std::equal(object1.begin(), object1.end(), object2.begin(), GenericOperations<T>::Equals);
+  }
+};
+
+template <typename T>
+struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value> {};
+
+template <typename T>
+struct GenericOperations : GenericOperationsDefault<T>
+{
+};
+
+/*!
+ * This trait defines which other types should be registered (if they have not been already)
+ * when a tDataType<T> object is created.
+ *
+ * Typically, if e.g. tDataType<int> is created, tDataType<std::vector<int>> is also registered
+ */
+template < typename T,
+         bool REGISTER_LIST_TYPE = (!serialization::IsSerializableContainer<T>::value) &&
+         (!std::is_base_of<tIsListType<false, false>, T>::value) && (!std::is_base_of<tIsListType<false, true>, T>::value) >
+struct AutoRegisterRelatedTypes
+{
+  static void Register()
+  {
+    tDataType<std::vector<T>>();
+  }
+};
+
+template <typename T>
+struct AutoRegisterRelatedTypes<T, false>
+{
+  static void Register()
+  {
+  }
+};
 
 } // namespace
 } // namespace

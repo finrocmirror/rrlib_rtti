@@ -389,8 +389,6 @@ void tType::tInfo::SetName(const std::string& new_name)
   }
 }
 
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-
 void tType::Deserialize(serialization::tInputStream& is, void* obj) const
 {
   if (info == NULL)
@@ -469,9 +467,6 @@ serialization::tStringInputStream& operator >> (serialization::tStringInputStrea
   dt = tType::FindType(s);
   return stream;
 }
-
-#endif
-
 
 //----------------------------------------------------------------------
 // End of namespace declaration
