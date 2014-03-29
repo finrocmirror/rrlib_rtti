@@ -25,60 +25,63 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * \brief   Contains tGenericObjectBaseImpl
  *
+ * \b tGenericObjectBaseImpl
+ *
+ * This class implements all type-specific generic operations of
+ * tGenericObject.
  */
 //----------------------------------------------------------------------
-#ifndef __rrlib__rtti__tGenericObjectBaseImpl_h__
-#define __rrlib__rtti__tGenericObjectBaseImpl_h__
+#ifndef __rrlib__rtti__detail__tGenericObjectBaseImpl_h__
+#define __rrlib__rtti__detail__tGenericObjectBaseImpl_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
 #include "rrlib/serialization/tStringInputStream.h"
 #include "rrlib/serialization/tStringOutputStream.h"
 #include "rrlib/serialization/type_traits.h"
 
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/tGenericObject.h"
 
-namespace rrlib
-{
-namespace xml
-{
-class tNode;
-}
-}
-
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
-class tFactory;
-
 namespace detail
 {
 
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! Generic object implementation
+/*!
+ * This class implements all type-specific generic operations of
+ * tGenericObject.
+ */
 template<typename T>
 class tGenericObjectBaseImpl : public tGenericObject
 {
-protected:
 
-  tGenericObjectBaseImpl() :
-    tGenericObject(tDataType<T>())
-  {}
-
-  virtual void DeepCopyFrom(const void* source, tFactory* f) override
-  {
-    DeepCopyFromImpl(*static_cast<const T*>(source), f);
-  }
-
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
 
   virtual void Clear() override
   {
     //TODO
-  }
-
-  virtual bool Equals(const tGenericObject& other) override
-  {
-    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && GenericOperations<T>::Equals(this->GetData<T>(), other.GetData<T>()));
   }
 
   /*!
@@ -101,6 +104,11 @@ public:
     serialization::Deserialize(is, tGenericObject::GetData<T>());
   }
 
+  virtual bool Equals(const tGenericObject& other) override
+  {
+    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && GenericOperations<T>::Equals(this->GetData<T>(), other.GetData<T>()));
+  }
+
   virtual void Deserialize(const xml::tNode& node) override
   {
     serialization::Deserialize(node, tGenericObject::GetData<T>());
@@ -120,10 +128,33 @@ public:
   {
     serialization::Serialize(node, tGenericObject::GetData<T>());
   }
+
+//----------------------------------------------------------------------
+// Protected constructor and methods
+//----------------------------------------------------------------------
+protected:
+
+  tGenericObjectBaseImpl() :
+    tGenericObject(tDataType<T>())
+  {}
+
+//----------------------------------------------------------------------
+// Private fields and methods
+//----------------------------------------------------------------------
+private:
+
+  virtual void DeepCopyFrom(const void* source, tFactory* f) override
+  {
+    DeepCopyFromImpl(*static_cast<const T*>(source), f);
+  }
+
 };
 
-} // namespace
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
+}
 
-#endif // __rrlib__rtti__tGenericObjectBaseImpl_h__
+#endif

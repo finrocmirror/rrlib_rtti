@@ -25,36 +25,71 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * \brief   Contains tGenericObjectWrapper
+ *
+ * \b tGenericObjectWrapper
+ *
+ * Allows wrapping an existing object as tGenericObject
  *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__tGenericObjectWrapper_h__
 #define __rrlib__rtti__tGenericObjectWrapper_h__
 
-#include "rrlib/rtti/detail/tGenericObjectBaseImpl.h"
-#include <assert.h>
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
 
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
+#include "rrlib/rtti/detail/tGenericObjectBaseImpl.h"
+
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! Wraps existing object
 /*!
- * Allows wrapping any object as GenericObject
+ * Allows wrapping an existing object as tGenericObject
  */
 template <typename T>
 class tGenericObjectWrapper : public detail::tGenericObjectBaseImpl<T>
 {
 
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
+
   tGenericObjectWrapper(T& wrapped_object) : detail::tGenericObjectBaseImpl<T>()
   {
     this->wrapped = &wrapped_object;
   }
 
+//----------------------------------------------------------------------
+// Private fields and methods
+//----------------------------------------------------------------------
+private:
+
 };
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__tGenericObjectWrapper_h__
+
+#endif

@@ -25,34 +25,53 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * \brief   Contains tTypedObject
+ *
+ * \b tTypedObject
+ *
+ * This is the abstract base class for any object that has additional
+ * type information from rrlib_rtti.
  *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__tTypedObject_h__
 #define __rrlib__rtti__tTypedObject_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/tType.h"
 
-
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! Object with type information
 /*!
  * This is the abstract base class for any object that has additional
- * type information as provided in this package.
- *
- * If rrlib_serialization is present, such classes can be cleanly serialized to
- * streams.
+ * type information from rrlib_rtti.
  */
 class tTypedObject
 {
-protected:
 
-  /*! Type of object */
-  tType type;
-
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
 
   /*!
@@ -72,10 +91,21 @@ public:
     return *this;
   }
 
+  /*!
+   * \ŗeturn Type information for object
+   */
   inline tType GetType() const
   {
     return type;
   }
+
+//----------------------------------------------------------------------
+// Protected fields and methods
+//----------------------------------------------------------------------
+protected:
+
+  /*! Type information for object */
+  tType type;
 
 };
 
@@ -84,13 +114,18 @@ inline std::ostream& operator << (std::ostream& output, const tTypedObject* lu)
   output << typeid(*lu).name() << " (" << ((void*)lu) << ")";
   return output;
 }
+
 inline std::ostream& operator << (std::ostream& output, const tTypedObject& lu)
 {
   output << (&lu);
   return output;
 }
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__tTypedObject_h__
+
+#endif

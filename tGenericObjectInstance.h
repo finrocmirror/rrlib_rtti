@@ -25,28 +25,54 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * \brief   Contains tGenericObjectInstance
+ *
+ * \b tGenericObjectInstance
+ *
+ * A generic object that allocates and owns its wrapped data
  *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__tGenericObjectInstance_h__
 #define __rrlib__rtti__tGenericObjectInstance_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/detail/tGenericObjectBaseImpl.h"
 
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! Generic object owning buffer
 /*!
- * Used for initially creating/instantiating GenericObject.
- *
- * This class should only be instantiated by tDataType !
+ * A generic object that allocates and owns its wrapped data
  */
 template<typename T, bool NO_ARG_CONSTRUCTOR = std::is_base_of<serialization::DefaultImplementation, serialization::DefaultInstantiation<T>>::value>
 class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
 {
+
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
+
   tGenericObjectInstance() :
     detail::tGenericObjectBaseImpl<T>(),
     wrapped_object(serialization::DefaultInstantiation<T>::Create())
@@ -54,17 +80,26 @@ public:
     tGenericObject::wrapped = &wrapped_object;
   }
 
+//----------------------------------------------------------------------
+// Private fields and methods
+//----------------------------------------------------------------------
 private:
 
   /*! Wrapped object */
   T wrapped_object;
-
 };
 
+
+// Specialization for when default constructor is available
 template<typename T>
 class tGenericObjectInstance<T, true> : public detail::tGenericObjectBaseImpl<T>
 {
+
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
+
   tGenericObjectInstance() :
     detail::tGenericObjectBaseImpl<T>(),
     wrapped_object()
@@ -72,13 +107,20 @@ public:
     tGenericObject::wrapped = &wrapped_object;
   }
 
+//----------------------------------------------------------------------
+// Private fields and methods
+//----------------------------------------------------------------------
 private:
 
   /*! Wrapped object */
   T wrapped_object;
 };
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__tGenericObjectInstance_h__
+
+#endif

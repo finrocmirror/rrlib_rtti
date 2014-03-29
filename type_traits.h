@@ -25,28 +25,43 @@
  *
  * \date    2012-02-05
  *
- * \brief
- *
  * Various type traits required for rrlib_rtti.
  * Most of them can be specialized.
+ *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__type_traits_h__
 #define __rrlib__rtti__type_traits_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
 #include <type_traits>
-
 #include "rrlib/serialization/type_traits.h"
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/tIsListType.h"
 #include "rrlib/rtti/detail/generic_operations.h"
 
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
 
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
 template <typename T>
 class tDataType;
+
+//----------------------------------------------------------------------
+// Function declarations
+//----------------------------------------------------------------------
 
 namespace trait_flags
 {
@@ -308,7 +323,11 @@ struct AutoRegisterRelatedTypes<T, false>
   }
 };
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__tTypeTraitsVector_h__
+
+#endif

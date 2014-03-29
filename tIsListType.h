@@ -25,19 +25,45 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * \brief   Contains tIsListType
+ *
+ * \b tIsListType
+ *
+ * By deriving from this class, it can be indicated whether a class is suitable for use in lists.
+ * When this is indicated, list types are automatically instantiated when class is registered as data type.
+ *
+ * BY_VALUE   indicates whether automatic creation of list type std::vector<T> is desired.
+ * SHARED_PTR indicates whether automatic creation of list type std::vector<shared_ptr<T>> is desired.
  *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__tIsListType_h__
 #define __rrlib__rtti__tIsListType_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
 
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
 
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! A type suitable for containers?
 /*!
  * By deriving from this class, it can be indicated whether a class is suitable for use in lists.
  * When this is indicated, list types are automatically instantiated when class is registered as data type.
@@ -45,13 +71,16 @@ namespace rtti
  * BY_VALUE   indicates whether automatic creation of list type std::vector<T> is desired.
  * SHARED_PTR indicates whether automatic creation of list type std::vector<shared_ptr<T>> is desired.
  */
-
 template <bool BY_VALUE, bool SHARED_PTR>
 class tIsListType
 {
 };
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__tIsListType_h__
+
+#endif

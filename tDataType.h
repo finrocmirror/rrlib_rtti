@@ -25,24 +25,40 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * \brief   Contains tDataType
+ *
+ * \b tDataType
+ *
+ * Objects of this class contain and register runtime information about the
+ * data type T.
  *
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__tDataType_h__
 #define __rrlib__rtti__tDataType_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
+#include <string>
+#include <typeinfo>
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/rtti.h"
 #include "rrlib/rtti/type_traits.h"
 #include "rrlib/rtti/tType.h"
-#include <assert.h>
-#include <string>
-#include <typeinfo>
-#include <type_traits>
-#include <cstring>
 
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
 namespace serialization
 {
 class tInputStream;
@@ -51,68 +67,24 @@ class tOutputStream;
 namespace rtti
 {
 class tGenericObject;
-class tFactory;
 
+//----------------------------------------------------------------------
+// Class declaration
+//----------------------------------------------------------------------
+//! Runteim type information for T
 /*!
- * Objects of this class contain info about the data type T
+ * Objects of this class contain and register runtime information about the
+ * data type T.
  */
 template<typename T>
 class tDataType : public tType
 {
-  /*!
-   * Data type info with factory functions
-   */
-  class tDataTypeInfoBase : public tType::tInfo
-  {
-  public:
-
-    tDataTypeInfoBase();
-
-    virtual tGenericObject* CreateInstanceGeneric(void* placement) const override;
-
-    virtual void DeepCopy(const void* src, void* dest, tFactory* f) const override;
-
-    virtual void Deserialize(serialization::tInputStream& is, void* obj) const override;
-
-    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const override;
-  };
-
   template <typename U = T>
-  class tDataTypeInfo : public tDataTypeInfoBase
-  {
-  public:
-    tDataTypeInfo()
-    {
-      this->type = tClassification::PLAIN;
-      this->name = tType::GetTypeNameFromRtti(typeid(T).name());
-    }
+  class tDataTypeInfo;
 
-    virtual void Init() override
-    {
-      AutoRegisterRelatedTypes<T>::Register();
-    }
-  };
-
-  template <typename U>
-  class tDataTypeInfo<std::vector<U>> : public tDataTypeInfoBase
-  {
-  public:
-    tDataTypeInfo()
-    {
-      this->type = tClassification::LIST;
-    }
-
-    virtual void Init() override
-    {
-      this->element_type = tDataType<U>::GetDataTypeInfo();
-      this->element_type->list_type = this;
-      if (this->name.length() == 0)
-      {
-        this->name = std::string("List<") + this->element_type->name + ">";
-      }
-    }
-  };
-
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
 public:
 
   tDataType() : tType(GetDataTypeInfo())
@@ -158,6 +130,64 @@ public:
     return &info;
   }
 
+//----------------------------------------------------------------------
+// Private fields and methods
+//----------------------------------------------------------------------
+private:
+
+  /*!
+   * Data type info with factory functions
+   */
+  class tDataTypeInfoBase : public tType::tInfo
+  {
+  public:
+
+    tDataTypeInfoBase();
+
+    virtual tGenericObject* CreateInstanceGeneric(void* placement) const override;
+
+    virtual void DeepCopy(const void* src, void* dest, tFactory* f) const override;
+
+    virtual void Deserialize(serialization::tInputStream& is, void* obj) const override;
+
+    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const override;
+  };
+
+  template <typename U>
+  class tDataTypeInfo : public tDataTypeInfoBase
+  {
+  public:
+    tDataTypeInfo()
+    {
+      this->type = tClassification::PLAIN;
+      this->name = tType::GetTypeNameFromRtti(typeid(T).name());
+    }
+
+    virtual void Init() override
+    {
+      AutoRegisterRelatedTypes<T>::Register();
+    }
+  };
+
+  template <typename U>
+  class tDataTypeInfo<std::vector<U>> : public tDataTypeInfoBase
+  {
+  public:
+    tDataTypeInfo()
+    {
+      this->type = tClassification::LIST;
+    }
+
+    virtual void Init() override
+    {
+      this->element_type = tDataType<U>::GetDataTypeInfo();
+      this->element_type->list_type = this;
+      if (this->name.length() == 0)
+      {
+        this->name = std::string("List<") + this->element_type->name + ">";
+      }
+    }
+  };
 };
 
 extern template class tDataType<serialization::tMemoryBuffer>;
@@ -178,9 +208,12 @@ extern template class tDataType<std::string>;
 extern template class tDataType<rrlib::time::tTimestamp>;
 extern template class tDataType<rrlib::time::tDuration>;
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
 #include "rrlib/rtti/tDataType.hpp"
 
-#endif // __rrlib__rtti__tDataType_h__
+#endif

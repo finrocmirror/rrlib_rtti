@@ -27,18 +27,43 @@
  *
  */
 //----------------------------------------------------------------------
-#include "rrlib/rtti/tGenericObjectInstance.h"
-#include "rrlib/rtti/tGenericObjectWrapper.h"
-#include "rrlib/rtti/type_traits.h"
+
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
 #include "rrlib/logging/messages.h"
 
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
+#include "rrlib/rtti/tGenericObjectInstance.h"
+#include "rrlib/rtti/tGenericObjectWrapper.h"
 
+//----------------------------------------------------------------------
+// Debugging
+//----------------------------------------------------------------------
+#include <cassert>
+
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
 
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
 std::string GetBinaryCurrentlyPerformingStaticInitialization();
+
+//----------------------------------------------------------------------
+// Const values
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Implementation
+//----------------------------------------------------------------------
 
 template<typename T>
 tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase()
@@ -107,6 +132,8 @@ void tDataType<T>::tDataTypeInfoBase::Serialize(serialization::tOutputStream& os
   serialization::Serialize(os, *s);
 }
 
-} // namespace
-} // namespace
-
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}

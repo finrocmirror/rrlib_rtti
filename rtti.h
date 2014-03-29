@@ -25,24 +25,39 @@
  *
  * \date    2012-02-05
  *
- * \brief
+ * Main header of rrlib_rtti. Typically, this should be included.
+ * Contains utility functions.
  *
- * This is the standard include for using rrlib_rtti.
- *
- * It contains various useful functions.
  */
 //----------------------------------------------------------------------
 #ifndef __rrlib__rtti__rtti_h__
 #define __rrlib__rtti__rtti_h__
 
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
 #include "rrlib/serialization/serialization.h"
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
 #include "rrlib/rtti/tDataType.h"
 
-
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
 {
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Function declarations
+//----------------------------------------------------------------------
 
 /*!
  * \return If a .so-file currently performs static initializations - returns name of .so file
@@ -61,7 +76,11 @@ void ResizeVector(std::vector<T>& vector, size_t new_size)
   serialization::ContainerResize<T>::Resize(vector, new_size);
 }
 
-} // namespace
-} // namespace
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
 
-#endif // __rrlib__rtti__rtti_h__
+
+#endif
