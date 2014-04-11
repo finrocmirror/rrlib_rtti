@@ -120,8 +120,9 @@ private:
     static_assert(rrlib::serialization::IsBinarySerializable<T>::value, "Trait not correctly implemented");
     tGenericObjectWrapper<T> wrapper(t);
     tGenericObject* copy = wrapper.GetType().CreateInstanceGeneric();
+    RRLIB_UNIT_TESTS_EQUALITY_MESSAGE(std::string("Objects must not be equal (type: ") + util::Demangle(typeid(T).name()) + ")", copy->Equals(wrapper), false);
     copy->DeepCopyFrom(wrapper);
-    RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Objects must be equal", copy->Equals(wrapper), true);
+    RRLIB_UNIT_TESTS_EQUALITY_MESSAGE(std::string("Objects must be equal (type: ") + util::Demangle(typeid(T).name()) + ")", copy->Equals(wrapper), true);
   }
 
   void TestGenericOperations()
@@ -135,6 +136,8 @@ private:
     TestGenericOperations(test_vector);
     std::vector<bool> test_vector_bool = { false, true, true };
     TestGenericOperations(test_vector_bool);
+    std::vector<std::vector<double>> test_double_vector = { { 3, 4 }, { 2 } };
+    TestGenericOperations(test_double_vector);
 
     tBuffer buffer;
     serialization::tOutputStream stream(buffer);

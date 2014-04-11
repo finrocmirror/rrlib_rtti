@@ -238,9 +238,9 @@ struct GenericOperationsContainer
   }
 
   template <typename TContainer>
-  static bool Equals(const TContainer& object1, const TContainer& object2)
+  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
   {
-    return std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
+    return object1.size() == object2.size() && std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
   }
 };
 
@@ -254,7 +254,7 @@ struct GenericOperationsContainer<T, MAP, true>
   }
 
   template <typename TContainer>
-  static bool Equals(const TContainer& object1, const TContainer& object2)
+  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
   {
     return object1 == object2;
   }
@@ -279,14 +279,23 @@ struct GenericOperationsContainer<T, true, false>
   }
 
   template <typename TContainer>
-  static bool Equals(const TContainer& object1, const TContainer& object2)
+  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
   {
-    return std::equal(object1.begin(), object1.end(), object2.begin(), GenericOperations<T>::Equals);
+    return object1.size() == object2.size() && std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
   }
 };
 
 template <typename T>
-struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value> {};
+struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value>
+{
+  typedef GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value> tBase;
+
+  // we need this non-template 'Equals' function to get a function pointer on 'Equals' at other places
+  static inline bool Equals(const T& object1, const T& object2)
+  {
+    return tBase::EqualsImplementation(object1, object2);
+  }
+};
 
 template <typename T>
 struct GenericOperations : GenericOperationsDefault<T>
