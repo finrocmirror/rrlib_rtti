@@ -37,7 +37,7 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include <type_traits>
-#include "rrlib/serialization/type_traits.h"
+#include "rrlib/serialization/serialization.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
