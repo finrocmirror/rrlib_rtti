@@ -76,7 +76,7 @@ class Class2 {};
 class RenamedClass {};
 
 
-class tTestTraitsRtti : public rrlib::util::tUnitTestSuite
+class tTestTraitsRtti : public util::tUnitTestSuite
 {
   RRLIB_UNIT_TESTS_BEGIN_SUITE(tTestTraitsRtti);
   RRLIB_UNIT_TESTS_ADD_TEST(TestTypeNaming);
@@ -84,13 +84,6 @@ class tTestTraitsRtti : public rrlib::util::tUnitTestSuite
   RRLIB_UNIT_TESTS_END_SUITE;
 
 private:
-
-  virtual void InitializeTests() override
-  {
-
-  }
-
-  virtual void CleanUp() override {}
 
   void TestTypeNaming()
   {
