@@ -79,10 +79,14 @@ void tGenericObject::Deserialize(serialization::tInputStream& stream, serializat
   }
   else
   {
+#ifdef _LIB_RRLIB_XML_PRESENT_
     std::string s = stream.ReadString();
     xml::tDocument d(s.c_str(), s.length(), false);
     xml::tNode& n = d.RootNode();
     Deserialize(n);
+#else
+    throw std::invalid_argument("XML support not available");
+#endif
   }
 }
 
@@ -100,10 +104,14 @@ void tGenericObject::Serialize(serialization::tOutputStream& stream, serializati
   }
   else
   {
+#ifdef _LIB_RRLIB_XML_PRESENT_
     xml::tDocument d;
     xml::tNode& n = d.AddRootNode("value");
     Serialize(n);
     stream.WriteString(n.GetXMLDump(true));
+#else
+    throw std::invalid_argument("XML support not available");
+#endif
   }
 }
 

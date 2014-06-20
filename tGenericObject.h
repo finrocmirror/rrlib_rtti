@@ -161,10 +161,14 @@ public:
   // Generic serialization
   virtual void Deserialize(serialization::tInputStream& stream) = 0;
   virtual void Deserialize(serialization::tStringInputStream& stream) = 0;
+#ifdef _LIB_RRLIB_XML_PRESENT_
   virtual void Deserialize(const xml::tNode& node) = 0;
+#endif
   virtual void Serialize(serialization::tOutputStream& stream) const = 0;
   virtual void Serialize(serialization::tStringOutputStream& stream) const = 0;
+#ifdef _LIB_RRLIB_XML_PRESENT_
   virtual void Serialize(xml::tNode& node) const = 0;
+#endif
 
   /*!
    * Deserialize data from binary input stream - possibly using non-binary encoding.

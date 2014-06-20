@@ -190,7 +190,8 @@ public:
   }
 
   /*!
-   * \return binary file that initializes data type statically
+   * \return binary file that initializes data type statically.
+   * On non-Linux platforms this always returns the empty string.
    */
   const std::string GetBinary() const
   {

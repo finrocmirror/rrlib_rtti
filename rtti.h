@@ -60,7 +60,8 @@ namespace rtti
 //----------------------------------------------------------------------
 
 /*!
- * \return If a .so-file currently performs static initializations - returns name of .so file
+ * \return If a .so-file currently performs static initializations - returns name of .so file.
+ * On non-Linux platforms this always returns the empty string.
  */
 std::string GetBinaryCurrentlyPerformingStaticInitialization();
 

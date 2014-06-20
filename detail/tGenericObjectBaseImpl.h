@@ -104,14 +104,16 @@ public:
     serialization::Deserialize(is, tGenericObject::GetData<T>());
   }
 
-  virtual bool Equals(const tGenericObject& other) override
-  {
-    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && GenericOperations<T>::Equals(this->GetData<T>(), other.GetData<T>()));
-  }
-
+#ifdef _LIB_RRLIB_XML_PRESENT_
   virtual void Deserialize(const xml::tNode& node) override
   {
     serialization::Deserialize(node, tGenericObject::GetData<T>());
+  }
+#endif
+
+  virtual bool Equals(const tGenericObject& other) override
+  {
+    return wrapped == other.GetRawDataPointer() || (GetType() == other.GetType() && GenericOperations<T>::Equals(this->GetData<T>(), other.GetData<T>()));
   }
 
   virtual void Serialize(serialization::tOutputStream& os) const override
@@ -124,10 +126,12 @@ public:
     serialization::Serialize(os, tGenericObject::GetData<T>());
   }
 
+#ifdef _LIB_RRLIB_XML_PRESENT_
   virtual void Serialize(xml::tNode& node) const override
   {
     serialization::Serialize(node, tGenericObject::GetData<T>());
   }
+#endif
 
 //----------------------------------------------------------------------
 // Protected constructor and methods

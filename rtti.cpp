@@ -32,7 +32,9 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
+#if __linux__
 #include <execinfo.h>
+#endif
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -74,6 +76,7 @@ static std::string GetSoFile(const std::string& backtrace_entry)
 
 std::string GetBinaryCurrentlyPerformingStaticInitialization()
 {
+#if __linux__
   // system .so file that does dynamic loading
   static std::string ld_so_file;
 
@@ -104,6 +107,7 @@ std::string GetBinaryCurrentlyPerformingStaticInitialization()
   }
 
   free(symbols);
+#endif
   return "";
 }
 
