@@ -38,6 +38,7 @@
 //----------------------------------------------------------------------
 #include "rrlib/rtti/tGenericObjectInstance.h"
 #include "rrlib/rtti/tGenericObjectWrapper.h"
+#include "rrlib/rtti/detail/tGenericObjectInstanceEmplaced.h"
 
 //----------------------------------------------------------------------
 // Debugging
@@ -85,14 +86,21 @@ tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase()
 }
 
 template<typename T>
-tGenericObject* tDataType<T>::tDataTypeInfoBase::CreateInstanceGeneric(void* placement) const
+tGenericObject* tDataType<T>::tDataTypeInfoBase::CreateInstanceGeneric(void* placement, bool emplace_generic_object) const
 {
   if (placement == NULL)
   {
-    placement = operator new(sizeof(tGenericObjectInstance<T>));
+    placement = operator new(emplace_generic_object ? sizeof(tGenericObjectInstance<T>) : sizeof(T));
   }
-  memset(placement, 0, sizeof(tGenericObjectInstance<T>)); // set memory to 0 so that memcmp on class T can be performed cleanly for certain types
-  return new(placement) tGenericObjectInstance<T>();
+  memset(placement, 0, emplace_generic_object ? sizeof(tGenericObjectInstance<T>) : sizeof(T)); // set memory to 0 so that memcmp on class T can be performed cleanly for certain types
+  if (emplace_generic_object)
+  {
+    return new(placement) tGenericObjectInstance<T>();
+  }
+  else
+  {
+    return new detail::tGenericObjectInstanceEmplaced<T>(placement);
+  }
 }
 
 template<typename T>

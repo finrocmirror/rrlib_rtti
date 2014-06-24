@@ -136,14 +136,15 @@ public:
   }
 
   /*!
-   * \param placement (Optional) Destination for placement new (needs to have at least size GetSize(true))
+   * \param placement (Optional) Destination for placement new (needs to have at least size GetSize(emplace_generic_object))
+   * \param emplace_generic_object If placement is specified: place generic objects at this memory address (true) or only data (false)?
    * \return Instance of data type wrapped as tGenericObject
    */
-  inline tGenericObject* CreateInstanceGeneric(void* placement = NULL) const
+  inline tGenericObject* CreateInstanceGeneric(void* placement = NULL, bool emplace_generic_object = true) const
   {
     if (info)
     {
-      return info->CreateInstanceGeneric(placement);
+      return info->CreateInstanceGeneric(placement, emplace_generic_object);
     }
     return NULL;
   }
@@ -433,10 +434,10 @@ protected:
 
     /*!
      * \param placement (Optional) Destination for placement new
-     * \param manager_size Size of management info
+     * \param emplace_generic_object If placement is specified: place generic objects at this memory address (true) or only data (false)?
      * \return Instance of Datatype as Generic object
      */
-    virtual tGenericObject* CreateInstanceGeneric(void* placement = NULL) const
+    virtual tGenericObject* CreateInstanceGeneric(void* placement = NULL, bool emplace_generic_object = true) const
     {
       return NULL;
     }

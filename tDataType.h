@@ -144,7 +144,7 @@ private:
 
     tDataTypeInfoBase();
 
-    virtual tGenericObject* CreateInstanceGeneric(void* placement) const override;
+    virtual tGenericObject* CreateInstanceGeneric(void* placement, bool emplace_generic_object) const override;
 
     virtual void DeepCopy(const void* src, void* dest, tFactory* f) const override;
 
