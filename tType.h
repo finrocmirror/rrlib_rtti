@@ -191,12 +191,24 @@ public:
   }
 
   /*!
+   * \param include_path Return file name including the path name?
    * \return binary file that initializes data type statically.
    * On non-Linux platforms this always returns the empty string.
    */
-  const std::string GetBinary() const
+  const std::string GetBinary(bool include_path) const
   {
-    return info ? info->binary : "";
+    if (info)
+    {
+      if (include_path || info->binary.find('/') == std::string::npos)
+      {
+        return info->binary;
+      }
+      else
+      {
+        return info->binary.substr(info->binary.rfind('/') + 1);
+      }
+    }
+    return "";
   }
 
   /*!
@@ -297,7 +309,7 @@ public:
   static uint16_t GetTypeCount();
 
   /*!
-   * \return Bit vector of type traits determined at compile time (see tTypeTraitVector)
+   * \return Bit vector of type traits determined at compile time (see type_traits.h)
    */
   inline int GetTypeTraits() const
   {
@@ -418,7 +430,7 @@ protected:
     /*! Annotations to data type */
     tTypeAnnotation* annotations[cMAX_ANNOTATIONS];
 
-    /*! binary file that initializes data type statically */
+    /*! binary file that initializes data type statically (includes path) */
     std::string binary;
 
     /*! pointer to enum string constants - if this is an enum type */

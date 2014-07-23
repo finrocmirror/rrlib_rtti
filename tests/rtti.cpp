@@ -105,6 +105,11 @@ private:
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Class3' are not equal", type.GetName() == "Class3", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Class3>' are not equal", type_list.GetName() == "List<Class3>", true);
     }
+
+    RRLIB_UNIT_TESTS_EQUALITY(std::string("String"), tDataType<std::string>().GetName());
+#if __linux__
+    RRLIB_UNIT_TESTS_EQUALITY(std::string("librrlib_rtti.so"), tDataType<std::string>().GetBinary(false));
+#endif
   }
 
   template <typename T>
