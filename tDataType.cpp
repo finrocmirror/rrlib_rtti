@@ -99,8 +99,8 @@ static tDataType<unsigned long long int> cULONGLONGINT_TYPE;
 static tDataType<double> cDOUBLE_TYPE;
 static tDataType<float> cFLOAT_TYPE;
 static tDataType<bool> cBOOL_TYPE;
-static tDataType<rrlib::time::tTimestamp> cTIMESTAMP_TYPE;
-static tDataType<rrlib::time::tDuration> cDURATION_TYPE;
+static tDataType<rrlib::time::tTimestamp> cTIMESTAMP_TYPE("Timestamp");
+static tDataType<rrlib::time::tDuration> cDURATION_TYPE("Duration");
 
 //----------------------------------------------------------------------
 // End of namespace declaration
