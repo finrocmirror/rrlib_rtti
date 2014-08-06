@@ -160,7 +160,7 @@ private:
     tDataTypeInfo()
     {
       this->type = tClassification::PLAIN;
-      this->name = tType::GetTypeNameFromRtti(typeid(T).name());
+      this->name = TypeName<T>::Get();
     }
 
     virtual void Init() override

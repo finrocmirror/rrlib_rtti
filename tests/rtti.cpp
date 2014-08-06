@@ -74,7 +74,21 @@ static_assert(detail::HasCopyFromMethod<serialization::tMemoryBuffer>::value, "T
 class Class1 {};
 class Class2 {};
 class RenamedClass {};
+class TypeTraitRenamedClass {};
 
+} // namespace test
+
+template<>
+struct TypeName<test::TypeTraitRenamedClass>
+{
+  static std::string Get()
+  {
+    return "Custom Name";
+  }
+};
+
+namespace test
+{
 
 class tTestTraitsRtti : public util::tUnitTestSuite
 {
@@ -105,6 +119,13 @@ private:
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Class3' are not equal", type.GetName() == "Class3", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Class3>' are not equal", type_list.GetName() == "List<Class3>", true);
     }
+    {
+      tDataType<TypeTraitRenamedClass> type;
+      tDataType<std::vector<TypeTraitRenamedClass>> type_list;
+      RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Custom Name' are not equal", type.GetName() == "Custom Name", true);
+      RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Custom Name>' are not equal", type_list.GetName() == "List<Custom Name>", true);
+    }
+
 
     RRLIB_UNIT_TESTS_EQUALITY(std::string("String"), tDataType<std::string>().GetName());
 #if __linux__

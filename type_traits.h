@@ -42,6 +42,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "rrlib/rtti/tType.h"
 #include "rrlib/rtti/tIsListType.h"
 #include "rrlib/rtti/detail/generic_operations.h"
 
@@ -173,6 +174,25 @@ struct SupportsBitwiseCopy
 {
   // std::is_trivially_destructible<T> is a heuristic. However, I have never encountered a type where this is invalid.
   enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) };
+};
+
+/*!
+ * Type trait that defines the rrlib_rtti name of a type.
+ * Template can be specialized for types in order to give them other names
+ * (possibly because they are more readable - or to retain backward-compatibility).
+ * Notably, a name can also be specified in the tDataType() constructor.
+ * This type trait, however, is useful for defining default names for templates.
+ */
+template <typename T>
+struct TypeName
+{
+  /*!
+   * \return Type name to use in rrlib_rttti for type T
+   */
+  static std::string Get()
+  {
+    return tType::GetTypeNameFromRtti(typeid(T).name());
+  }
 };
 
 /*!
