@@ -33,6 +33,8 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include <mutex>
+#include <set>
+#include <unordered_map>
 #include "rrlib/logging/messages.h"
 #include "rrlib/util/demangle.h"
 
@@ -107,6 +109,90 @@ static size_t& GetLastAnnotationIndex()
   return last_index;
 }
 
+/*!
+ * Comparator functor for desired order in set returned by GetRenamedTypes()
+ */
+struct RenamedTypeCompare
+{
+  bool operator()(tType lhs, tType rhs) const
+  {
+    return lhs.GetRttiNameDemangled().length() > rhs.GetRttiNameDemangled().length();
+  }
+};
+
+/*!
+ * \return Set with all types that have been renamed (sorted by length of original demangled name - longest first)
+ */
+static std::set<tType, RenamedTypeCompare>& GetRenamedTypes()
+{
+  static std::set<tType, RenamedTypeCompare> renamed_types;
+  return renamed_types;
+}
+
+/*!
+ * Replaces std container names in string that is provided
+ *
+ * \param type_name Type name string to modify
+ */
+static void ReplaceContainerNames(std::string& type_name)
+{
+  static const std::unordered_map<std::string, std::string> cTEMPLATE_NAMES = { {"std::vector<", "List"}, {"std::set<", "Set"}, {"std::map<", "Map"}, {"std::tuple<", "Tuple"} };
+  static const std::string cREMOVE_LAST_ARG = "std::allocator<";
+
+  for (auto & entry : cTEMPLATE_NAMES)
+  {
+    bool word_start = true;
+    for (size_t i = 0; i < type_name.length(); i++)
+    {
+      if (word_start && type_name.compare(i, entry.first.length(), entry.first) == 0)
+      {
+        // search for end of template
+        size_t bracket_count = 1;
+        size_t last_template_argument_start = 0;
+        size_t last_index = 0;
+        for (size_t index = i + entry.first.length(); index < type_name.length(); index++)
+        {
+          if (type_name[index] == '<')
+          {
+            bracket_count++;
+          }
+          else if (type_name[index] == '>')
+          {
+            bracket_count--;
+            if (bracket_count == 0)
+            {
+              last_index = index;
+              break;
+            }
+          }
+          else if (bracket_count == 1 && type_name[index] == ',')
+          {
+            last_template_argument_start = index;
+          }
+        }
+
+        if (last_template_argument_start && last_index)
+        {
+          // Remove last template argument?
+          if (type_name.compare(last_template_argument_start + 1, cREMOVE_LAST_ARG.length(), cREMOVE_LAST_ARG) == 0 ||
+              type_name.compare(last_template_argument_start + 2, cREMOVE_LAST_ARG.length(), cREMOVE_LAST_ARG) == 0)
+          {
+            type_name.replace(last_template_argument_start, last_index - last_template_argument_start, "");
+          }
+
+          // Replace template name
+          type_name.replace(i, entry.first.length() - 1, entry.second);
+
+          i = 0;
+          word_start = true;
+          continue;
+        }
+      }
+      word_start = !isalnum(type_name[i]);
+    }
+  }
+}
+
 } // namespace internal
 
 
@@ -127,9 +213,17 @@ tType::tType(tType::tInfo* info) :
     info->new_info = false;
     RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Adding data type ", GetName());
 
-    if (info->short_name.length() == 0)
+    // Add to string replacement table?
+    if (GetTypeNameFromRtti(info->rtti_name) != info->name)
     {
-      info->short_name = RemoveNamespaces(info->name);
+      internal::GetRenamedTypes().insert(*this);
+
+      // Debug output
+      /*RRLIB_LOG_PRINT(DEBUG, "Content:");
+      for (auto it = internal::GetRenamedTypes().begin(); it != internal::GetRenamedTypes().end(); ++it)
+      {
+        RRLIB_LOG_PRINT(DEBUG, it->info->demangled_rtti_name);
+      }*/
     }
 
     info->Init();
@@ -246,6 +340,30 @@ std::string tType::GetTypeNameFromRtti(const char* rtti, bool remove_namespaces)
 {
   std::string demangled = util::Demangle(rtti);
 
+  // Do we have a template? => check for string replacements
+  if (demangled.find('<') != std::string::npos)
+  {
+    internal::ReplaceContainerNames(demangled);
+
+    // TODO: std::regex might be more convenient (available on all relevant platforms?)
+    for (auto it = internal::GetRenamedTypes().begin(); it != internal::GetRenamedTypes().end(); ++it)
+    {
+      size_t found_index = 0;
+
+      while ((found_index = demangled.find(it->GetRttiNameDemangled(), found_index + 1)) != std::string::npos)
+      {
+        // we only want to replace whole words => character before and after must not be a letter
+        if ((!isalnum(demangled[found_index - 1])) && found_index + it->GetRttiNameDemangled().length() < demangled.length() &&
+            (!isalnum(demangled[found_index + it->GetRttiNameDemangled().length()])))
+        {
+          demangled.replace(found_index, it->GetRttiNameDemangled().length(), it->GetName());
+          found_index = 0;
+        }
+      }
+    }
+  }
+
+  // Replace '::' with '.', remove 't' prefixes, replace '> >' with '>>'
   bool word_start = true;
   char name[demangled.size() + 1];
   char* name_ptr = name;
@@ -263,7 +381,7 @@ std::string tType::GetTypeNameFromRtti(const char* rtti, bool remove_namespaces)
         word_start = true;
         continue;
       }
-      if (word_start && islower(demangled[i]) && isupper(demangled[i + 1]))
+      if (word_start && demangled[i] == 't' && isupper(demangled[i + 1]))
       {
         i++;
       }
@@ -272,6 +390,11 @@ std::string tType::GetTypeNameFromRtti(const char* rtti, bool remove_namespaces)
     *name_ptr = demangled[i];
     name_ptr++;
     word_start = !isalnum(demangled[i]);
+
+    if (demangled.compare(i, 3, "> >") == 0)
+    {
+      i++; // Skip space
+    }
   }
 
   if (remove_namespaces)
@@ -325,16 +448,16 @@ std::string tType::RemoveNamespaces(const std::string& type_name)
   return result_ptr;
 }
 
-tType::tInfo::tInfo() :
-  type(tClassification::UNKNOWN),
-  name(),
-  short_name(),
-  rtti_name(NULL),
+tType::tInfo::tInfo(tType::tClassification classification, const char* rtti_name, const std::string& name) :
+  type(classification),
+  name(name),
+  short_name(RemoveNamespaces(name)),
+  rtti_name(rtti_name),
+  demangled_rtti_name(rrlib::util::Demangle(rtti_name)),
   size(0),
   generic_object_size(0),
   type_traits(0),
   new_info(true),
-  default_name(true),
   uid(-1),
   element_type(NULL),
   list_type(NULL),
@@ -360,33 +483,6 @@ tType::tInfo::~tInfo()
 void tType::tInfo::DeepCopy(const void* src, void* dest, tFactory* f) const
 {
   RRLIB_LOG_PRINT(ERROR, "Not implemented for this type");
-}
-
-void tType::tInfo::SetName(const std::string& new_name)
-{
-  if (!default_name)
-  {
-    if (new_name.compare(name) != 0)
-    {
-      RRLIB_LOG_PRINT(ERROR, "Name has already been set to '", name, "'. Ignoring.");
-    }
-    return;
-  }
-
-  default_name = false;
-  name = new_name;
-  short_name = RemoveNamespaces(name);
-
-  if (list_type != NULL)
-  {
-    list_type->name = std::string("List<") + name + ">";
-    list_type->short_name = RemoveNamespaces(list_type->name);
-  }
-  if (shared_ptr_list_type != NULL)
-  {
-    shared_ptr_list_type->name = std::string("List<") + name + "*>";
-    shared_ptr_list_type->short_name = RemoveNamespaces(shared_ptr_list_type->name);
-  }
 }
 
 void tType::Deserialize(serialization::tInputStream& is, void* obj) const

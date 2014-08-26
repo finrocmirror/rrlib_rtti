@@ -273,6 +273,15 @@ public:
   }
 
   /*!
+   * \return Demangled rtti name of data type
+   */
+  inline const std::string& GetRttiNameDemangled() const
+  {
+    static const std::string null_type_string = "NULL";
+    return info ? info->demangled_rtti_name : null_type_string;
+  }
+
+  /*!
    * \return In case of element: shared pointer list type (std::vector<std::shared_ptr<T>>)
    */
   inline tType GetSharedPtrListType() const
@@ -389,16 +398,19 @@ protected:
   struct tInfo : private util::tNoncopyable
   {
     /*! Type of data type */
-    tType::tClassification type;
+    const tType::tClassification type;
 
     /*! Name of data type */
-    std::string name;
+    const std::string name;
 
     /*! Short name of data type */
-    std::string short_name;
+    const std::string short_name;
 
     /*! RTTI name */
     const char* rtti_name;
+
+    /*! Demangled RTTI name */
+    const std::string demangled_rtti_name;
 
     /*! sizeof(T) */
     size_t size;
@@ -411,9 +423,6 @@ protected:
 
     /*! New info? */
     bool new_info;
-
-    /*! Is this the default name? - then it may be changed */
-    bool default_name;
 
     /*! Data type uid */
     int16_t uid;
@@ -440,7 +449,7 @@ protected:
     size_t enum_strings_dimension;
 
 
-    tInfo();
+    tInfo(tType::tClassification classification, const char* rtti_name, const std::string& name);
 
     virtual ~tInfo();
 
@@ -481,13 +490,6 @@ protected:
      */
     virtual void Serialize(serialization::tOutputStream& os, const void* obj) const;
 
-    /*!
-     * Set name of data type
-     * (only valid if still default == not set before)
-     *
-     * \param new_name New name of type
-     */
-    void SetName(const std::string& new_name);
   };
 
   tType(tInfo* info);

@@ -71,7 +71,7 @@ class tGenericObject;
 //----------------------------------------------------------------------
 // Class declaration
 //----------------------------------------------------------------------
-//! Runteim type information for T
+//! Runtime type information for T
 /*!
  * Objects of this class contain and register runtime information about the
  * data type T.
@@ -89,20 +89,15 @@ public:
 
   tDataType() : tType(GetDataTypeInfo())
   {
-    this->GetElementType();
-    this->GetListType();
-    this->GetSharedPtrListType();
   }
 
   /*!
+   * Custom name may only be specified on first instantiation of a tDataType<T> for each type T
+   *
    * \param name Name data type should get (if different from default)
    */
-  tDataType(const std::string& name) : tType(GetDataTypeInfo())
+  tDataType(const std::string& name) : tType(GetDataTypeInfo(name.c_str()))
   {
-    GetDataTypeInfo()->SetName(name);
-    this->GetElementType();
-    this->GetListType();
-    this->GetSharedPtrListType();
   }
 
   /*!
@@ -122,11 +117,17 @@ public:
   }
 
   /*!
+   * \param name Custom name for data type (may only be specified on first call/instantiation)
    * \return DataTypeInfo for this type T
    */
-  static tInfo* GetDataTypeInfo()
+  inline static tInfo* GetDataTypeInfo(const char* name = nullptr)
   {
-    static tDataTypeInfo<T> info;
+    static tDataTypeInfo<T> info(name);
+    if (name && info.name != name) // hopefully, compiler optimizes this away for all calls with name == nullptr
+    {
+      RRLIB_LOG_PRINT_STATIC(ERROR, "Type name '", info.name, "' can only be changed on initial instantiation of tDataType<T>.");
+    }
+    assert(((!name) || info.name == name) && "Type name may not be changed later"); // assertion for efficiency reasons
     return &info;
   }
 
@@ -142,7 +143,7 @@ private:
   {
   public:
 
-    tDataTypeInfoBase();
+    tDataTypeInfoBase(tType::tClassification classification, const std::string& name);
 
     virtual tGenericObject* CreateInstanceGeneric(void* placement, bool emplace_generic_object) const override;
 
@@ -151,17 +152,6 @@ private:
     virtual void Deserialize(serialization::tInputStream& is, void* obj) const override;
 
     virtual void Serialize(serialization::tOutputStream& os, const void* obj) const override;
-  };
-
-  template <typename U>
-  class tDataTypeInfo : public tDataTypeInfoBase
-  {
-  public:
-    tDataTypeInfo()
-    {
-      this->type = tClassification::PLAIN;
-      this->name = TypeName<T>::Get();
-    }
 
     virtual void Init() override
     {
@@ -170,22 +160,20 @@ private:
   };
 
   template <typename U>
+  class tDataTypeInfo : public tDataTypeInfoBase
+  {
+  public:
+    tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::PLAIN, name ? name : TypeName<T>::Get().c_str()) {}
+  };
+
+  template <typename U>
   class tDataTypeInfo<std::vector<U>> : public tDataTypeInfoBase
   {
   public:
-    tDataTypeInfo()
-    {
-      this->type = tClassification::LIST;
-    }
-
-    virtual void Init() override
+    tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::LIST, name ? name : TypeName<T>::Get().c_str())
     {
       this->element_type = tDataType<U>::GetDataTypeInfo();
       this->element_type->list_type = this;
-      if (this->name.length() == 0)
-      {
-        this->name = std::string("List<") + this->element_type->name + ">";
-      }
     }
   };
 };

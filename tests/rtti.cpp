@@ -76,6 +76,9 @@ class Class2 {};
 class RenamedClass {};
 class TypeTraitRenamedClass {};
 
+template <typename T>
+class TemplateClass {};
+
 } // namespace test
 
 template<>
@@ -125,7 +128,14 @@ private:
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Custom Name' are not equal", type.GetName() == "Custom Name", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Custom Name>' are not equal", type_list.GetName() == "List<Custom Name>", true);
     }
-
+    {
+      tDataType<std::tuple<std::string, rrlib::time::tTimestamp, std::vector<std::string>>> type;
+      RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Tuple<String, Timestamp, List<String>>' are not equal", type.GetName() == "Tuple<String, Timestamp, List<String>>", true);
+    }
+    {
+      tDataType<TemplateClass<std::vector<rrlib::time::tTimestamp>>> type;
+      RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'rrlib.rtti.test.TemplateClass<List<Timestamp>>' are not equal", type.GetName() == "rrlib.rtti.test.TemplateClass<List<Timestamp>>", true);
+    }
 
     RRLIB_UNIT_TESTS_EQUALITY(std::string("String"), tDataType<std::string>().GetName());
 #if __linux__

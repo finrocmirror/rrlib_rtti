@@ -67,9 +67,9 @@ std::string GetBinaryCurrentlyPerformingStaticInitialization();
 //----------------------------------------------------------------------
 
 template<typename T>
-tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase()
+tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase(tType::tClassification classification, const std::string& name) :
+  tInfo(classification, typeid(T).name(), name)
 {
-  rtti_name = typeid(T).name();
   size = sizeof(T);
   generic_object_size = sizeof(tGenericObjectInstance<T>);
   type_traits = tTypeTraitsVector<T>::value;
