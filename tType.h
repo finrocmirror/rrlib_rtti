@@ -231,19 +231,19 @@ public:
   }
 
   /*!
-   * \return If this is as enum type, returns enum constant names array - otherwise NULL
+   * \return Pointer to enum strings data if this is an enum type - otherwise NULL
    */
-  inline const char * const *GetEnumStrings()
+  const make_builder::internal::tEnumStrings* GetEnumStringsData()
   {
     return info ? info->enum_strings : NULL;
   }
 
   /*!
-   * \return Returns dimension of enum constant names array - if not an enum, zero obviously
+   * \return Vector with all numeric constants in string representation if this is an enum with custom (non-standard) values - otherwise NULL (for an enum meaning we have: 0, 1, 2, ..., n)
    */
-  inline size_t GetEnumStringsDimension()
+  const std::vector<std::string>* GetNonStandardEnumValueStrings()
   {
-    return info ? info->enum_strings_dimension : 0;
+    return info && info->non_standard_enum_value_strings.size() ? &info->non_standard_enum_value_strings : NULL;
   }
 
   /*!
@@ -442,11 +442,11 @@ protected:
     /*! binary file that initializes data type statically (includes path) */
     std::string binary;
 
-    /*! pointer to enum string constants - if this is an enum type */
-    const char * const *enum_strings;
+    /*! pointer to enum string constants data - if this is an enum type */
+    const make_builder::internal::tEnumStrings* enum_strings;
 
-    /*! dimension of enum string constants array - if this is an enum type */
-    size_t enum_strings_dimension;
+    /*! Strings of enum values - if they are custom (non-standard) */
+    std::vector<std::string> non_standard_enum_value_strings;
 
 
     tInfo(tType::tClassification classification, const char* rtti_name, const std::string& name);
