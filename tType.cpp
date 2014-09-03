@@ -464,7 +464,7 @@ tType::tInfo::tInfo(tType::tClassification classification, const char* rtti_name
   shared_ptr_list_type(NULL),
   binary(),
   enum_strings(NULL),
-  enum_strings_dimension(0)
+  non_standard_enum_value_strings()
 {
   for (size_t i = 0; i < cMAX_ANNOTATIONS; i++)
   {

@@ -79,7 +79,7 @@ class tGenericObject;
 template<typename T>
 class tDataType : public tType
 {
-  template <typename U = T>
+  template <typename U = T, bool Enum = std::is_enum<U>::value>
   class tDataTypeInfo;
 
 //----------------------------------------------------------------------
@@ -159,7 +159,7 @@ private:
     }
   };
 
-  template <typename U>
+  template <typename U, bool Enum>
   class tDataTypeInfo : public tDataTypeInfoBase
   {
   public:
@@ -167,13 +167,30 @@ private:
   };
 
   template <typename U>
-  class tDataTypeInfo<std::vector<U>> : public tDataTypeInfoBase
+  class tDataTypeInfo<std::vector<U>, false> : public tDataTypeInfoBase
   {
   public:
     tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::LIST, name ? name : TypeName<T>::Get().c_str())
     {
       this->element_type = tDataType<U>::GetDataTypeInfo();
       this->element_type->list_type = this;
+    }
+  };
+
+  template <typename U>
+  class tDataTypeInfo<U, true> : public tDataTypeInfoBase
+  {
+  public:
+    tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::PLAIN, name ? name : TypeName<T>::Get().c_str())
+    {
+      this->enum_strings = &make_builder::internal::GetEnumStrings<T>();
+      if (this->enum_strings->non_standard_values)
+      {
+        for (size_t i = 0; i < this->enum_strings->size; i++)
+        {
+          this->non_standard_enum_value_strings.emplace_back(std::to_string(static_cast<typename std::underlying_type<T>::type>(static_cast<const T*>(this->enum_strings->non_standard_values)[i])));
+        }
+      }
     }
   };
 };

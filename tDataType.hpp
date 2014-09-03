@@ -78,11 +78,6 @@ tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase(tType::tClassification classi
   {
     RRLIB_LOG_PRINT_STATIC(DEBUG_VERBOSE_1, "Data type ", name, " is statically loaded in '", binary, "'.");
   }
-  if (std::is_enum<T>::value)
-  {
-    this->enum_strings = make_builder::GetEnumStrings<T>();
-    this->enum_strings_dimension = make_builder::GetEnumStringsDimension<T>();
-  }
 }
 
 template<typename T>
