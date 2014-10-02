@@ -167,6 +167,8 @@ private:
     TestGenericOperations(test_vector_bool);
     std::vector<std::vector<double>> test_double_vector = { { 3, 4 }, { 2 } };
     TestGenericOperations(test_double_vector);
+    std::set<std::string> test_string_set = { "String 1", "String 2" };
+    TestGenericOperations(test_string_set);
 
     tBuffer buffer;
     serialization::tOutputStream stream(buffer);
