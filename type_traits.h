@@ -243,7 +243,7 @@ struct GenericOperationsDefault
 /*!
  * Default implementation for STL containers with elements of type T
  */
-template <typename T, bool MAP, bool SIMPLE = std::is_fundamental<T>::value>
+template <typename T, bool MAP, bool CONST_ELEMENTS, bool SIMPLE = std::is_fundamental<T>::value>
 struct GenericOperationsContainer
 {
   template <typename TContainer>
@@ -264,8 +264,8 @@ struct GenericOperationsContainer
   }
 };
 
-template <typename T, bool MAP>
-struct GenericOperationsContainer<T, MAP, true>
+template <typename T, bool MAP, bool CONST_ELEMENTS>
+struct GenericOperationsContainer<T, MAP, CONST_ELEMENTS, true>
 {
   template <typename TContainer>
   static void DeepCopy(const TContainer& source, TContainer& destination)
@@ -281,8 +281,8 @@ struct GenericOperationsContainer<T, MAP, true>
 };
 
 // Map
-template <typename T>
-struct GenericOperationsContainer<T, true, false>
+template <typename T, bool CONST_ELEMENTS>
+struct GenericOperationsContainer<T, true, CONST_ELEMENTS, false>
 {
   template <typename TMap>
   static void DeepCopy(const TMap& source, TMap& destination)
@@ -305,10 +305,33 @@ struct GenericOperationsContainer<T, true, false>
   }
 };
 
+// e.g. Set
 template <typename T>
-struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value>
+struct GenericOperationsContainer<T, false, true, false>
 {
-  typedef GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value> tBase;
+  template <typename TMap>
+  static void DeepCopy(const TMap& source, TMap& destination)
+  {
+    destination.clear();
+    for (auto it = source.begin(); it != source.end(); ++it)
+    {
+      T new_element(serialization::DefaultInstantiation<T>::Create());
+      GenericOperations<T>::DeepCopy(*it, new_element);
+      destination.emplace(std::move(new_element));
+    }
+  }
+
+  template <typename TContainer>
+  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
+  {
+    return object1.size() == object2.size() && std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
+  }
+};
+
+template <typename T>
+struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value, serialization::IsConstElementContainer<T>::value>
+{
+  typedef GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value, serialization::IsConstElementContainer<T>::value> tBase;
 
   // we need this non-template 'Equals' function to get a function pointer on 'Equals' at other places
   static inline bool Equals(const T& object1, const T& object2)
