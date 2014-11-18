@@ -116,7 +116,11 @@ struct RenamedTypeCompare
 {
   bool operator()(tType lhs, tType rhs) const
   {
-    return lhs.GetRttiNameDemangled().length() > rhs.GetRttiNameDemangled().length();
+    if (lhs.GetRttiNameDemangled().length() != rhs.GetRttiNameDemangled().length())
+    {
+      return lhs.GetRttiNameDemangled().length() > rhs.GetRttiNameDemangled().length();
+    }
+    return lhs.GetRttiNameDemangled() < rhs.GetRttiNameDemangled();
   }
 };
 
