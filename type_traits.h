@@ -173,7 +173,7 @@ template <typename T>
 struct SupportsBitwiseCopy
 {
   // std::is_trivially_destructible<T> is a heuristic. However, I have never encountered a type where this is invalid.
-  enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) };
+  enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) && (!std::is_polymorphic<T>::value) };
 };
 
 /*!
