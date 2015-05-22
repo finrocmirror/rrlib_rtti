@@ -408,6 +408,6 @@ struct AutoRegisterRelatedTypes<T, false>
 }
 
 static_assert(std::is_same<typename rrlib::rtti::NormalizedType<bool>::type, bool>::value, "Invalid trait implementation");
-static_assert(std::is_same<typename rrlib::rtti::NormalizedType<unsigned long>::type, unsigned>::value, "Invalid trait implementation");
+static_assert(std::is_same<typename rrlib::rtti::NormalizedType<unsigned long>::type, typename std::conditional<sizeof(unsigned long) == 8, unsigned long long, unsigned int>::type>::value, "Invalid trait implementation");
 
 #endif
