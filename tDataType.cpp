@@ -86,19 +86,17 @@ template class tDataType<rrlib::time::tTimestamp>;
 template class tDataType<rrlib::time::tDuration>;
 
 static tDataType<std::string> cSTRING_TYPE("String"); // Make sure std::string data type has name "String" - as in Java
-static tDataType<int8_t> cINT8_TYPE;
-static tDataType<int16_t> cINT16_TYPE;
-static tDataType<int> cINT_TYPE;
-static tDataType<long int> cLONGINT_TYPE;
-static tDataType<long long int> cLONGLONGINT_TYPE;
-static tDataType<uint8_t> cUINT8_TYPE;
-static tDataType<uint16_t> cUINT16_TYPE;
-static tDataType<unsigned int> cUINT_TYPE;
-static tDataType<unsigned long int> cULONGINT_TYPE;
-static tDataType<unsigned long long int> cULONGLONGINT_TYPE;
-static tDataType<double> cDOUBLE_TYPE;
-static tDataType<float> cFLOAT_TYPE;
-static tDataType<bool> cBOOL_TYPE;
+static tDataType<int8_t> cINT8_TYPE("int8");
+static tDataType<int16_t> cINT16_TYPE("int16");
+static tDataType<int> cINT_TYPE("int32");
+static tDataType<long long int> cLONGLONGINT_TYPE("int64");
+static tDataType<uint8_t> cUINT8_TYPE("uint8");
+static tDataType<uint16_t> cUINT16_TYPE("uint16");;
+static tDataType<unsigned int> cUINT_TYPE("uint32");;
+static tDataType<unsigned long long int> cULONGLONGINT_TYPE("uint64");;
+static tDataType<double> cDOUBLE_TYPE("double");;
+static tDataType<float> cFLOAT_TYPE("float");;
+static tDataType<bool> cBOOL_TYPE("bool");;
 static tDataType<rrlib::time::tTimestamp> cTIMESTAMP_TYPE("Timestamp");
 static tDataType<rrlib::time::tDuration> cDURATION_TYPE("Duration");
 

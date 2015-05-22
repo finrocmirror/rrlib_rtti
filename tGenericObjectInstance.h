@@ -65,8 +65,9 @@ namespace rtti
  * A generic object that allocates and owns its wrapped data
  */
 template<typename T, bool NO_ARG_CONSTRUCTOR = std::is_base_of<serialization::DefaultImplementation, serialization::DefaultInstantiation<T>>::value>
-class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
+class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<typename NormalizedType<T>::type>
 {
+  typedef typename NormalizedType<T>::type tBuffer;
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
@@ -74,8 +75,8 @@ class tGenericObjectInstance : public detail::tGenericObjectBaseImpl<T>
 public:
 
   tGenericObjectInstance() :
-    detail::tGenericObjectBaseImpl<T>(),
-    wrapped_object(serialization::DefaultInstantiation<T>::Create())
+    detail::tGenericObjectBaseImpl<tBuffer>(),
+    wrapped_object(serialization::DefaultInstantiation<tBuffer>::Create())
   {
     tGenericObject::wrapped = &wrapped_object;
   }
@@ -86,14 +87,15 @@ public:
 private:
 
   /*! Wrapped object */
-  T wrapped_object;
+  tBuffer wrapped_object;
 };
 
 
 // Specialization for when default constructor is available
 template<typename T>
-class tGenericObjectInstance<T, true> : public detail::tGenericObjectBaseImpl<T>
+class tGenericObjectInstance<T, true> : public detail::tGenericObjectBaseImpl<typename NormalizedType<T>::type>
 {
+  typedef typename NormalizedType<T>::type tBuffer;
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
@@ -101,7 +103,7 @@ class tGenericObjectInstance<T, true> : public detail::tGenericObjectBaseImpl<T>
 public:
 
   tGenericObjectInstance() :
-    detail::tGenericObjectBaseImpl<T>(),
+    detail::tGenericObjectBaseImpl<tBuffer>(),
     wrapped_object()
   {
     tGenericObject::wrapped = &wrapped_object;
@@ -113,7 +115,7 @@ public:
 private:
 
   /*! Wrapped object */
-  T wrapped_object;
+  tBuffer wrapped_object;
 };
 
 //----------------------------------------------------------------------

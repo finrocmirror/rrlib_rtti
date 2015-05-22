@@ -50,6 +50,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "rrlib/rtti/type_traits.h"
 #include "rrlib/rtti/tTypedObject.h"
 
 //----------------------------------------------------------------------
@@ -128,7 +129,7 @@ public:
   template <typename T>
   const T& GetData() const
   {
-    assert(typeid(T).name() == type.GetRttiName());
+    assert(typeid(typename NormalizedType<T>::type).name() == type.GetRttiName());
     return *static_cast<const T*>(wrapped);
   }
 
@@ -138,7 +139,7 @@ public:
   template <typename T>
   inline T& GetData()
   {
-    assert(typeid(T).name() == type.GetRttiName());
+    assert(typeid(typename NormalizedType<T>::type).name() == type.GetRttiName());
     return *static_cast<T*>(wrapped);
   }
 

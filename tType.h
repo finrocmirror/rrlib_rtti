@@ -265,7 +265,7 @@ public:
   }
 
   /*!
-   * \return rtti name of data type
+   * \return rtti name of data type  (note that this is the 'normalized' type for integral types - e.g. "i" for 'long' on 32 bit platforms)
    */
   const char* GetRttiName() const
   {

@@ -45,6 +45,7 @@
 #include "rrlib/rtti/tType.h"
 #include "rrlib/rtti/tIsListType.h"
 #include "rrlib/rtti/detail/generic_operations.h"
+#include "rrlib/rtti/detail/type_traits.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -177,6 +178,31 @@ struct SupportsBitwiseCopy
 };
 
 /*!
+ * Type trait to get 'normalized' type for type T.
+ * It is used to reduce the number of int types to a platform-independent subset.
+ * 'type' is usually T - unless this is e.g. a 'long int' or 'char' type.
+ */
+template <typename T>
+struct NormalizedType
+{
+  typedef typename std::conditional<std::is_integral<T>::value, typename detail::NormalizedIntegerType<sizeof(T), std::is_unsigned<T>::value>::type, T>::type type;
+};
+template <>
+struct NormalizedType<bool>
+{
+  typedef bool type;
+};
+
+/*!
+ * Type trait to determine whether type T is 'normalized'
+ */
+template <typename T>
+struct IsNormalizedType
+{
+  enum { value = std::is_same<T, typename NormalizedType<T>::type>::value };
+};
+
+/*!
  * Type trait that defines the rrlib_rtti name of a type.
  * Template can be specialized for types in order to give them other names
  * (possibly because they are more readable - or to retain backward-compatibility).
@@ -187,7 +213,7 @@ template <typename T>
 struct TypeName
 {
   /*!
-   * \return Type name to use in rrlib_rttti for type T
+   * \return Type name to use in rrlib_rtti for type T
    */
   static std::string Get()
   {
@@ -381,5 +407,7 @@ struct AutoRegisterRelatedTypes<T, false>
 }
 }
 
+static_assert(std::is_same<typename rrlib::rtti::NormalizedType<bool>::type, bool>::value, "Invalid trait implementation");
+static_assert(std::is_same<typename rrlib::rtti::NormalizedType<unsigned long>::type, unsigned>::value, "Invalid trait implementation");
 
 #endif

@@ -2,7 +2,7 @@
 // You received this file as part of RRLib
 // Robotics Research Library
 //
-// Copyright (C) Finroc GbR (finroc.org)
+// Copyright (C) AG Robotersysteme TU Kaiserslautern
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,22 +19,18 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 //----------------------------------------------------------------------
-/*!\file    rrlib/rtti/tGenericObjectWrapper.h
+/*!\file    rrlib/rtti/detail/type_traits.h
  *
  * \author  Max Reichardt
  *
- * \date    2012-02-05
+ * \date    2015-05-22
  *
- * \brief   Contains tGenericObjectWrapper
- *
- * \b tGenericObjectWrapper
- *
- * Allows wrapping an existing object as tGenericObject
+ * Contains type trait implementation helper classes and structs
  *
  */
 //----------------------------------------------------------------------
-#ifndef __rrlib__rtti__tGenericObjectWrapper_h__
-#define __rrlib__rtti__tGenericObjectWrapper_h__
+#ifndef __rrlib__rtti__detail__type_traits_h__
+#define __rrlib__rtti__detail__type_traits_h__
 
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
@@ -43,7 +39,6 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
-#include "rrlib/rtti/detail/tGenericObjectBaseImpl.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -52,42 +47,79 @@ namespace rrlib
 {
 namespace rtti
 {
+namespace detail
+{
 
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// Class declaration
+// Function declarations
 //----------------------------------------------------------------------
-//! Wraps existing object
+
 /*!
- * Allows wrapping an existing object as tGenericObject
+ * Provides normalized integer types for specified size and signedness
  */
-template <typename T>
-class tGenericObjectWrapper : public detail::tGenericObjectBaseImpl<typename NormalizedType<T>::type>
+template <size_t SIZE, bool UNSIGNED>
+struct NormalizedIntegerType
 {
-
-//----------------------------------------------------------------------
-// Public methods and typedefs
-//----------------------------------------------------------------------
-public:
-
-  tGenericObjectWrapper(T& wrapped_object) : detail::tGenericObjectBaseImpl<typename NormalizedType<T>::type>()
-  {
-    this->wrapped = &wrapped_object;
-  }
-
-//----------------------------------------------------------------------
-// Private fields and methods
-//----------------------------------------------------------------------
-private:
-
+  typedef void type;
 };
+
+template<>
+struct NormalizedIntegerType<1, false>
+{
+  typedef int8_t type;
+};
+
+template<>
+struct NormalizedIntegerType<1, true>
+{
+  typedef uint8_t type;
+};
+
+template<>
+struct NormalizedIntegerType<2, false>
+{
+  typedef int16_t type;
+};
+
+template<>
+struct NormalizedIntegerType<2, true>
+{
+  typedef uint16_t type;
+};
+
+template<>
+struct NormalizedIntegerType<4, false>
+{
+  typedef int type;
+};
+
+template<>
+struct NormalizedIntegerType<4, true>
+{
+  typedef unsigned int type;
+};
+
+template<>
+struct NormalizedIntegerType<8, false>
+{
+  typedef long long type;
+};
+
+template<>
+struct NormalizedIntegerType<8, true>
+{
+  typedef unsigned long long type;
+};
+
 
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
+}
 }
 }
 

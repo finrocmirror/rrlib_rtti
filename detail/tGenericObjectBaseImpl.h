@@ -73,6 +73,7 @@ namespace detail
 template<typename T>
 class tGenericObjectBaseImpl : public tGenericObject
 {
+  static_assert(IsNormalizedType<T>::value, "Only normalized types should be used in generic objects");
 
 //----------------------------------------------------------------------
 // Public methods and typedefs

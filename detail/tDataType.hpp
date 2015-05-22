@@ -19,7 +19,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 //----------------------------------------------------------------------
-/*!\file    rrlib/rtti/tDataType.hpp
+/*!\file    rrlib/rtti/detail/tDataType.hpp
  *
  * \author  Max Reichardt
  *
@@ -57,6 +57,9 @@ namespace rtti
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 std::string GetBinaryCurrentlyPerformingStaticInitialization();
+
+namespace detail
+{
 
 //----------------------------------------------------------------------
 // Const values
@@ -138,5 +141,6 @@ void tDataType<T>::tDataTypeInfoBase::Serialize(serialization::tOutputStream& os
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
+}
 }
 }

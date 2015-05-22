@@ -40,33 +40,19 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include <string>
-#include <typeinfo>
 
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
-#include "rrlib/rtti/rtti.h"
-#include "rrlib/rtti/type_traits.h"
-#include "rrlib/rtti/tType.h"
+#include "rrlib/rtti/detail/tDataType.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
 //----------------------------------------------------------------------
 namespace rrlib
 {
-
-//----------------------------------------------------------------------
-// Forward declarations / typedefs / enums
-//----------------------------------------------------------------------
-namespace serialization
-{
-class tInputStream;
-class tOutputStream;
-}
 namespace rtti
 {
-class tGenericObject;
 
 //----------------------------------------------------------------------
 // Class declaration
@@ -77,17 +63,16 @@ class tGenericObject;
  * data type T.
  */
 template<typename T>
-class tDataType : public tType
+class tDataType : public detail::tDataType<typename NormalizedType<T>::type>
 {
-  template <typename U = T, bool Enum = std::is_enum<U>::value>
-  class tDataTypeInfo;
+  typedef detail::tDataType<typename NormalizedType<T>::type> tBase;
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
 //----------------------------------------------------------------------
 public:
 
-  tDataType() : tType(GetDataTypeInfo())
+  tDataType() : tBase()
   {
   }
 
@@ -96,103 +81,9 @@ public:
    *
    * \param name Name data type should get (if different from default)
    */
-  tDataType(const std::string& name) : tType(GetDataTypeInfo(name.c_str()))
+  tDataType(const std::string& name) : tBase(name)
   {
   }
-
-  /*!
-   * Lookup data type by rtti name
-   *
-   * Tries T first
-   * \param rtti_name rtti name
-   * \return Data type with specified name (== NULL if it could not be found)
-   */
-  static tType FindTypeByRtti(const char* rtti_name)
-  {
-    if (rtti_name == GetDataTypeInfo()->rtti_name)
-    {
-      return tDataType();
-    }
-    return tType::FindTypeByRtti(rtti_name);
-  }
-
-  /*!
-   * \param name Custom name for data type (may only be specified on first call/instantiation)
-   * \return DataTypeInfo for this type T
-   */
-  inline static tInfo* GetDataTypeInfo(const char* name = nullptr)
-  {
-    static tDataTypeInfo<T> info(name);
-    if (name && info.name != name) // hopefully, compiler optimizes this away for all calls with name == nullptr
-    {
-      RRLIB_LOG_PRINT_STATIC(ERROR, "Type name '", info.name, "' can only be changed on initial instantiation of tDataType<T>.");
-    }
-    assert(((!name) || info.name == name) && "Type name may not be changed later"); // assertion for efficiency reasons
-    return &info;
-  }
-
-//----------------------------------------------------------------------
-// Private fields and methods
-//----------------------------------------------------------------------
-private:
-
-  /*!
-   * Data type info with factory functions
-   */
-  class tDataTypeInfoBase : public tType::tInfo
-  {
-  public:
-
-    tDataTypeInfoBase(tType::tClassification classification, const std::string& name);
-
-    virtual tGenericObject* CreateInstanceGeneric(void* placement, bool emplace_generic_object) const override;
-
-    virtual void DeepCopy(const void* src, void* dest, tFactory* f) const override;
-
-    virtual void Deserialize(serialization::tInputStream& is, void* obj) const override;
-
-    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const override;
-
-    virtual void Init() override
-    {
-      AutoRegisterRelatedTypes<T>::Register();
-    }
-  };
-
-  template <typename U, bool Enum>
-  class tDataTypeInfo : public tDataTypeInfoBase
-  {
-  public:
-    tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::PLAIN, name ? name : TypeName<T>::Get().c_str()) {}
-  };
-
-  template <typename U>
-  class tDataTypeInfo<std::vector<U>, false> : public tDataTypeInfoBase
-  {
-  public:
-    tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::LIST, name ? name : TypeName<T>::Get().c_str())
-    {
-      this->element_type = tDataType<U>::GetDataTypeInfo();
-      this->element_type->list_type = this;
-    }
-  };
-
-  template <typename U>
-  class tDataTypeInfo<U, true> : public tDataTypeInfoBase
-  {
-  public:
-    tDataTypeInfo(const char* name) : tDataTypeInfoBase(tClassification::PLAIN, name ? name : TypeName<T>::Get().c_str())
-    {
-      this->enum_strings = &make_builder::internal::GetEnumStrings<T>();
-      if (this->enum_strings->non_standard_values)
-      {
-        for (size_t i = 0; i < this->enum_strings->size; i++)
-        {
-          this->non_standard_enum_value_strings.emplace_back(std::to_string(static_cast<typename std::underlying_type<T>::type>(static_cast<const T*>(this->enum_strings->non_standard_values)[i])));
-        }
-      }
-    }
-  };
 };
 
 extern template class tDataType<serialization::tMemoryBuffer>;
@@ -218,7 +109,5 @@ extern template class tDataType<rrlib::time::tDuration>;
 //----------------------------------------------------------------------
 }
 }
-
-#include "rrlib/rtti/tDataType.hpp"
 
 #endif
