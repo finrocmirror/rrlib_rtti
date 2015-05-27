@@ -187,6 +187,11 @@ struct NormalizedType
 {
   typedef typename std::conditional<std::is_integral<T>::value, typename detail::NormalizedIntegerType<sizeof(T), std::is_unsigned<T>::value>::type, T>::type type;
 };
+template <typename T>
+struct NormalizedType<std::vector<T>>
+{
+  typedef std::vector<typename NormalizedType<T>::type> type;
+};
 template <>
 struct NormalizedType<bool>
 {

@@ -98,6 +98,7 @@ class tTestTraitsRtti : public util::tUnitTestSuite
   RRLIB_UNIT_TESTS_BEGIN_SUITE(tTestTraitsRtti);
   RRLIB_UNIT_TESTS_ADD_TEST(TestTypeNaming);
   RRLIB_UNIT_TESTS_ADD_TEST(TestGenericOperations);
+  RRLIB_UNIT_TESTS_ADD_TEST(TestDataTypeInstantiation);
   RRLIB_UNIT_TESTS_END_SUITE;
 
 private:
@@ -183,6 +184,14 @@ private:
     m[3] = tBuffer();
     TestGenericOperations(m);
   }
+
+  void TestDataTypeInstantiation()
+  {
+    tDataType<long unsigned int> ulong_type;
+    tDataType<std::vector<long unsigned int>> ulong_vector_type;
+    RRLIB_UNIT_TESTS_ASSERT(ulong_type == ulong_vector_type.GetElementType());
+  }
+
 };
 
 RRLIB_UNIT_TESTS_REGISTER_SUITE(tTestTraitsRtti);
