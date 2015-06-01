@@ -310,6 +310,15 @@ tType tType::FindType(const std::string& name)
     }
   }
 
+  bool try_to_lookup_old_names = true;
+  for (auto it = internal::GetTypes().begin(); try_to_lookup_old_names && it != internal::GetTypes().end(); ++it)
+  {
+    if (name == it->GetTypeNameFromRtti(it->info->rtti_name, false))
+    {
+      return *it;
+    }
+  }
+
   if (name.find('.') != std::string::npos) // namespaces in specified name
   {
     return FindType(RemoveNamespaces(name));
