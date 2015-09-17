@@ -76,7 +76,7 @@ static std::string GetSoFile(const std::string& backtrace_entry)
 
 std::string GetBinaryCurrentlyPerformingStaticInitialization()
 {
-#if __linux__
+#if RRLIB_RTTI_BINARY_DETECTION_ENABLED
   // system .so file that does dynamic loading
   static std::string ld_so_file;
 

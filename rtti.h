@@ -55,6 +55,14 @@ namespace rtti
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 
+#ifndef RRLIB_RTTI_BINARY_DETECTION_ENABLED
+#if __linux__
+#define RRLIB_RTTI_BINARY_DETECTION_ENABLED 1
+#else
+#define RRLIB_RTTI_BINARY_DETECTION_ENABLED 0
+#endif
+#endif
+
 //----------------------------------------------------------------------
 // Function declarations
 //----------------------------------------------------------------------

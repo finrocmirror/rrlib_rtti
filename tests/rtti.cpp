@@ -33,6 +33,7 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include "rrlib/util/tUnitTestSuite.h"
+#include <thread>
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -75,6 +76,7 @@ class Class1 {};
 class Class2 {};
 class RenamedClass {};
 class TypeTraitRenamedClass {};
+class ClassInitializedInThread {};
 
 template <typename T>
 class TemplateClass {};
@@ -97,6 +99,7 @@ class tTestTraitsRtti : public util::tUnitTestSuite
 {
   RRLIB_UNIT_TESTS_BEGIN_SUITE(tTestTraitsRtti);
   RRLIB_UNIT_TESTS_ADD_TEST(TestTypeNaming);
+  RRLIB_UNIT_TESTS_ADD_TEST(TestGetBinary);
   RRLIB_UNIT_TESTS_ADD_TEST(TestGenericOperations);
   RRLIB_UNIT_TESTS_ADD_TEST(TestDataTypeInstantiation);
   RRLIB_UNIT_TESTS_END_SUITE;
@@ -139,8 +142,27 @@ private:
     }
 
     RRLIB_UNIT_TESTS_EQUALITY(std::string("String"), tDataType<std::string>().GetName());
-#if __linux__
-    RRLIB_UNIT_TESTS_EQUALITY(std::string("librrlib_rtti.so"), tDataType<std::string>().GetBinary(false));
+  }
+
+  void TestGetBinary()
+  {
+#if RRLIB_RTTI_BINARY_DETECTION_ENABLED
+    // Test GetBinary() function in different cases
+    // (TODO: another case would be static initialization after dlopen() call, which should return a non-empty string;
+    //  this is difficult to realize, as there is currently no way to specify dependency to non-linked lib in make_builder)
+
+    // Case 1: Static initialization before main()
+    RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("GetBinary() failed on this plattform (we had this due to some erroneous stack traces on Odroid plattforms). You might want to define RRLIB_RTTI_BINARY_DETECTION_ENABLED=0 in order to disable this optional feature. It is currently only used to determine any missing .so files to auto-load on startup when graphically creating ports with finstruct.", std::string("librrlib_rtti.so"), tDataType<std::string>().GetBinary(false));
+
+    // Case 2: Initialization below main()
+    RRLIB_UNIT_TESTS_EQUALITY(std::string(""), tDataType<Class1>().GetBinary(false));
+
+    // Case 3: Initialization in separate thread
+    std::thread test_thread([]()
+    {
+      RRLIB_UNIT_TESTS_EQUALITY(std::string(""), tDataType<ClassInitializedInThread>().GetBinary(false));
+    });
+    test_thread.join();
 #endif
   }
 
