@@ -76,8 +76,8 @@ tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase(tType::tClassification classi
   size = sizeof(T);
   generic_object_size = sizeof(tGenericObjectInstance<T>);
   type_traits = tTypeTraitsVector<T>::value;
-#if RRLIB_RTTI_BINARY_DETECTION_ENABLED
   binary = GetBinaryCurrentlyPerformingStaticInitialization();
+#if RRLIB_RTTI_BINARY_DETECTION_ENABLED
   if (binary.length() > 0)
   {
     RRLIB_LOG_PRINT_STATIC(DEBUG_VERBOSE_1, "Data type ", name, " is statically loaded in '", binary, "'.");
