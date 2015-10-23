@@ -33,6 +33,7 @@
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
 #include "rrlib/util/tUnitTestSuite.h"
+#include "rrlib/util/string.h"
 #include <thread>
 
 //----------------------------------------------------------------------
@@ -152,7 +153,8 @@ private:
     //  this is difficult to realize, as there is currently no way to specify dependency to non-linked lib in make_builder)
 
     // Case 1: Static initialization before main()
-    RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("GetBinary() failed on this plattform (we had this due to some erroneous stack traces on Odroid plattforms). You might want to define RRLIB_RTTI_BINARY_DETECTION_ENABLED=0 in order to disable this optional feature. It is currently only used to determine any missing .so files to auto-load on startup when graphically creating ports with finstruct.", std::string("librrlib_rtti.so"), tDataType<std::string>().GetBinary(false));
+    RRLIB_UNIT_TESTS_ASSERT_MESSAGE("GetBinary() failed on this plattform (we had this due to some erroneous stack traces on Odroid plattforms). You might want to define RRLIB_RTTI_BINARY_DETECTION_ENABLED=0 in order to disable this optional feature. It is currently only used to determine any missing .so files to auto-load on startup when graphically creating ports with finstruct.",
+                                    rrlib::util::StartsWith(tDataType<std::string>().GetBinary(false), "librrlib_rtti.so"));
 
     // Case 2: Initialization below main()
     RRLIB_UNIT_TESTS_EQUALITY(std::string(""), tDataType<Class1>().GetBinary(false));
