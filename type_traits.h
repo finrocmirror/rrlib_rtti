@@ -73,8 +73,7 @@ static const int cIS_BINARY_SERIALIZABLE = 1 << 0;
 static const int cIS_STRING_SERIALIZABLE = 1 << 1;
 static const int cIS_XML_SERIALIZABLE = 1 << 2;
 static const int cIS_ENUM = 1 << 3;
-static const int cHAS_TRIVIAL_ASSIGN = 1 << 4;
-static const int cHAS_TRIVIAL_COPY_CONSTRUCTOR = 1 << 5;
+
 static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 6;
 static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 7;
 static const int cIS_ABSTRACT = 1 << 8;
@@ -106,10 +105,8 @@ struct tTypeTraitsVector
 
   // Bit vector for type
   static const int value =
-    (std::has_trivial_copy_assign<T>::value ? trait_flags::cHAS_TRIVIAL_ASSIGN : 0) |
-    (std::has_trivial_copy_constructor<T>::value ? trait_flags::cHAS_TRIVIAL_COPY_CONSTRUCTOR : 0) |
     (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
-    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
+    (std::has_virtual_destructor<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
     (std::is_abstract<T>::value ? trait_flags::cIS_ABSTRACT : 0) |
     (std::is_arithmetic<T>::value ? trait_flags::cIS_ARITHMETIC : 0) |
     (std::is_array<T>::value ? trait_flags::cIS_ARRAY : 0) |
