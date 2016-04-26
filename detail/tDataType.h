@@ -82,7 +82,7 @@ namespace detail
 template<typename T>
 class tDataType : public tType
 {
-  template <typename U = T, bool Enum = std::is_enum<U>::value>
+  template <typename U, bool Enum>
   class tDataTypeInfo;
 
 //----------------------------------------------------------------------
