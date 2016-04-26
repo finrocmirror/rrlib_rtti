@@ -79,7 +79,7 @@ class tGenericObject;
 template<typename T>
 class tDataType : public tType
 {
-  template <typename U = T, bool Enum = std::is_enum<U>::value>
+  template <typename U, bool Enum>
   class tDataTypeInfo;
 
 //----------------------------------------------------------------------
@@ -122,7 +122,7 @@ public:
    */
   inline static tInfo* GetDataTypeInfo(const char* name = nullptr)
   {
-    static tDataTypeInfo<T> info(name);
+    static tDataTypeInfo<T, std::is_enum<T>::value> info(name);
     if (name && info.name != name) // hopefully, compiler optimizes this away for all calls with name == nullptr
     {
       RRLIB_LOG_PRINT_STATIC(ERROR, "Type name '", info.name, "' can only be changed on initial instantiation of tDataType<T>.");
