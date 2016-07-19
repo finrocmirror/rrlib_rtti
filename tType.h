@@ -150,13 +150,19 @@ public:
   }
 
   /*!
-   * Deep copy objects
+   * Deep copy objects (no-op with null-type)
    *
    * \param source Source object
    * \param destination Destination object
    * \param factory Factory to use (optional, required for pointer lists etc.)
    */
-  void DeepCopy(const void* source, void* destination, tFactory* factory = NULL) const;
+  inline void DeepCopy(const void* source, void* destination, tFactory* factory = nullptr) const
+  {
+    if (info)
+    {
+      info->DeepCopy(source, destination, factory);
+    }
+  }
 
   /*!
    * Lookup data type by name.
@@ -282,14 +288,6 @@ public:
   }
 
   /*!
-   * \return In case of element: shared pointer list type (std::vector<std::shared_ptr<T>>)
-   */
-  inline tType GetSharedPtrListType() const
-  {
-    return tType(info ? info->shared_ptr_list_type : NULL);
-  }
-
-  /*!
    * \param Obtain size as generic object?
    * \return size of data type (as returned from sizeof(T) or sizeof(tGenericObjectInstance<T>))
    */
@@ -332,6 +330,15 @@ public:
   {
     return info ? info->uid : -1;
   }
+
+  /*!
+   * \return Underlying type (see UnderlyingType type trait)
+   */
+  inline tType GetUnderlyingType() const
+  {
+    return tType(info ? info->underlying_type : nullptr);
+  }
+
 
   /*!
    * Can object of this data type be converted to specified type?
@@ -433,8 +440,8 @@ protected:
     /*! In case of element: list type (std::vector<T>) */
     tInfo* list_type;
 
-    /*! In case of element: shared pointer list type (std::vector<std::shared_ptr<T>>) */
-    tInfo* shared_ptr_list_type;
+    /*! Contains pointer to underlying type (see UnderlyingType type trait) */
+    tInfo* underlying_type;
 
     /*! Annotations to data type */
     tTypeAnnotation* annotations[cMAX_ANNOTATIONS];

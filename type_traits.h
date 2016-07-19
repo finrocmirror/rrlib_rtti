@@ -65,30 +65,109 @@ class tDataType;
 // Function declarations
 //----------------------------------------------------------------------
 
+/*!
+ * Type trait that indicates whether rrlib_rtti should consider the cast from TSource to TDestination to be implicit - e.g. leading to automatic casts in Finroc data ports.
+ * Unlike std::is_convertible, this trait should only be true if the cast is lossless for all possible values of TSource:
+ *   meaning there are no cases where this could lose precision or values could be outside of TDestination's range.
+ *
+ * This follows the defensive idea adopted in rrlib_rtti that automatic/implicit casting should never happen for cases where this could be erroneous.
+ */
+template <typename TSource, typename TDestination>
+struct IsImplicitlyConvertible
+{
+  /*! Enforce explicit casts (for arithmetic types)? */
+  enum { cENFORCE_EXPLICIT_CAST = std::is_arithmetic<TSource>::value && std::is_arithmetic<TDestination>::value &&
+                                  ((std::is_signed<TSource>::value && std::is_unsigned<TDestination>::value) ||   // sign-loss shall be explicit
+                                   (sizeof(TSource) > sizeof(TDestination) || // information-loss shall be explicit
+                                    // and also precision-loss
+                                    (sizeof(TSource) == sizeof(TDestination) && (std::is_integral<TSource>::value != std::is_integral<TDestination>::value || std::is_signed<TSource>::value == std::is_signed<TDestination>::value))))
+       };
+
+  /*! Defines whether cast is implicit in rrlib_rtti */
+  enum { value = std::is_convertible<TSource, TDestination>::value && (!cENFORCE_EXPLICIT_CAST) && (!std::is_enum<TSource>::value) && (!std::is_enum<TDestination>::value) };
+};
+
+/*!
+ * Type trait that can be specialized to indicate that type T and 'type' share the same memory layout and basic binary operations.
+ * This means specifically:
+ * (1) identical default-construction & destruction
+ * (2) identical serialization & deserialization
+ * (3) identical DeepCopy() & Equals()  (see GenericOperations below)
+ * (4) (1)-(3) are also true for std::vector<T> and std::vector<type>
+ * (5) Casting from T to 'type' could safely be done with a reinterpret_cast.
+ *
+ * This is e.g. true for some wrapper classes (e.g. in rrlib_si_units) - and allows for major optimizations in rrlib_rrti type handling.
+ *
+ * In this sense, signed integral types can be seen as having unsigned integral types as underlying types - which is defined below.
+ *
+ * Note: Operations (1) to (3) need not be defined for type T in order to be usable with rrlib_rtti - only for type 'type'
+ */
+template <typename T>
+struct UnderlyingType
+{
+  /*! Does not need to be defined by specializations */
+  enum { cSIGNED_INTEGRAL_TYPE = std::is_integral<T>::value && std::is_signed<T>::value };
+  typedef typename std::conditional<cSIGNED_INTEGRAL_TYPE, T, int>::type tIntegralType;
+
+  /*! underlying type; set to T if T does not wrap another type as specified above */
+  typedef typename std::conditional<cSIGNED_INTEGRAL_TYPE, typename std::make_unsigned<tIntegralType>::type, T>::type type;
+
+  /*!
+   * True if 'type' can safely be converted to 'T' using a reinterpret_cast.
+   * This should not be set to true if e.g. the constructor of T checks or limits values.
+   */
+  enum { reverse_cast_valid = cSIGNED_INTEGRAL_TYPE || std::is_same<T, type>::value };
+};
+
+template <typename T>
+struct UnderlyingType<std::vector<T>>
+{
+  typedef std::vector<typename UnderlyingType<T>::type> type;
+  enum { reverse_cast_valid = UnderlyingType<T>::reverse_cast_valid };
+};
+
+/*!
+ * Type trait that defines whether an object of type T can be safely deep-copied
+ * using memcpy and whether equality can be tested using memcmp.
+ */
+template <typename T>
+struct SupportsBitwiseCopy
+{
+  // std::is_trivially_destructible<T> is a heuristic. However, I have never encountered a type where this is invalid.
+  enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) && (!std::is_polymorphic<T>::value) };
+};
+
+
+
 namespace trait_flags
 {
 
-// Bits for different traits (note regarding order: the first four are interesting for other runtime environments in Finroc)
+// Bits for different traits (note regarding order: the first nine are interesting for other runtime environments in Finroc)
 static const int cIS_BINARY_SERIALIZABLE = 1 << 0;
 static const int cIS_STRING_SERIALIZABLE = 1 << 1;
 static const int cIS_XML_SERIALIZABLE = 1 << 2;
 static const int cIS_ENUM = 1 << 3;
+static const int cUNDERLYING_TYPE = 1 << 4;
+static const int cCAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 5;
+static const int cREINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID = 1 << 6;
+static const int cCAST_FROM_UNDERLYING_TYPE_IMPLICIT = 1 << 7;
+static const int cSUPPORTS_BITWISE_COPY = 1 << 8;
 
-static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 6;
-static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 7;
-static const int cIS_ABSTRACT = 1 << 8;
-static const int cIS_ARITHMETIC = 1 << 9;
-static const int cIS_ARRAY = 1 << 10;
-static const int cIS_CLASS = 1 << 11;
-static const int cIS_EMPTY = 1 << 12;
-static const int cIS_FLOATING_POINT = 1 << 13;
-static const int cIS_INTEGRAL = 1 << 14;
-static const int cIS_OBJECT = 1 << 15;
-static const int cIS_POD = 1 << 16;
-static const int cIS_POINTER = 1 << 17;
-static const int cIS_SCALAR = 1 << 18;
-static const int cIS_SIGNED = 1 << 19;
-static const int cIS_UNSIGNED = 1 << 20;
+static const int cIS_ABSTRACT = 1 << 16;
+static const int cIS_ARITHMETIC = 1 << 17;
+static const int cIS_ARRAY = 1 << 18;
+static const int cIS_CLASS = 1 << 19;
+static const int cIS_EMPTY = 1 << 20;
+static const int cIS_FLOATING_POINT = 1 << 21;
+static const int cIS_INTEGRAL = 1 << 22;
+static const int cIS_OBJECT = 1 << 23;
+static const int cIS_POD = 1 << 24;
+static const int cIS_POINTER = 1 << 25;
+static const int cIS_SCALAR = 1 << 26;
+static const int cIS_SIGNED = 1 << 27;
+static const int cIS_UNSIGNED = 1 << 28;
+static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 29;
+static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 30;
 
 } // namespace
 
@@ -102,6 +181,7 @@ static const int cIS_UNSIGNED = 1 << 20;
 template <typename T>
 struct tTypeTraitsVector
 {
+  enum { cHAS_DIFFERENT_UNDERLYING_TYPE = !std::is_same<typename UnderlyingType<T>::type, T>::value };
 
   // Bit vector for type
   static const int value =
@@ -120,13 +200,22 @@ struct tTypeTraitsVector
     (std::is_pointer<T>::value ? trait_flags::cIS_POINTER : 0) |
     (std::is_scalar<T>::value ? trait_flags::cIS_SCALAR : 0) |
     (std::is_signed<T>::value ? trait_flags::cIS_SIGNED : 0) |
-    (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0)
+    (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE ? trait_flags::cUNDERLYING_TYPE : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<T, typename UnderlyingType<T>::type>::value ? trait_flags::cCAST_TO_UNDERLYING_TYPE_IMPLICIT : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::reverse_cast_valid ? trait_flags::cREINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<typename UnderlyingType<T>::type, T>::value ? trait_flags::cCAST_FROM_UNDERLYING_TYPE_IMPLICIT : 0) |
+    (SupportsBitwiseCopy<T>::value ? trait_flags::cSUPPORTS_BITWISE_COPY : 0)
 #ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
     | (serialization::IsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
     (serialization::IsStringSerializable<T>::value ? trait_flags::cIS_STRING_SERIALIZABLE : 0) |
     (serialization::IsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0)
 #endif
     ;
+
+  // sanity check of type traits for type T
+  static_assert((!SupportsBitwiseCopy<T>::value) || (!std::has_virtual_destructor<T>::value), "This would copy/compare vtable pointers");
+  static_assert(sizeof(T) == sizeof(typename UnderlyingType<T>::type), "Types need the same memory layout");
 };
 
 /*!
@@ -161,17 +250,6 @@ struct HasEqualToOperator
   static int32_t Test(...);
 
   enum { value = sizeof(Test(true)) == sizeof(int16_t) };
-};
-
-/*!
- * Type trait that defines whether an object of type T can be safely deep-copied
- * using memcpy and whether equality can be tested using memcmp.
- */
-template <typename T>
-struct SupportsBitwiseCopy
-{
-  // std::is_trivially_destructible<T> is a heuristic. However, I have never encountered a type where this is invalid.
-  enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) && (!std::is_polymorphic<T>::value) };
 };
 
 /*!

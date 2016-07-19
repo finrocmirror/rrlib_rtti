@@ -86,14 +86,14 @@ template class tDataType<rrlib::time::tTimestamp>;
 template class tDataType<rrlib::time::tDuration>;
 
 static tDataType<std::string> cSTRING_TYPE("String"); // Make sure std::string data type has name "String" - as in Java
-static tDataType<int8_t> cINT8_TYPE("int8");
-static tDataType<int16_t> cINT16_TYPE("int16");
-static tDataType<int> cINT_TYPE("int32");
-static tDataType<long long int> cLONGLONGINT_TYPE("int64");
 static tDataType<uint8_t> cUINT8_TYPE("uint8");
 static tDataType<uint16_t> cUINT16_TYPE("uint16");;
 static tDataType<unsigned int> cUINT_TYPE("uint32");;
 static tDataType<unsigned long long int> cULONGLONGINT_TYPE("uint64");;
+static tDataType<int8_t> cINT8_TYPE("int8");
+static tDataType<int16_t> cINT16_TYPE("int16");
+static tDataType<int> cINT_TYPE("int32");
+static tDataType<long long int> cLONGLONGINT_TYPE("int64");
 static tDataType<double> cDOUBLE_TYPE("double");;
 static tDataType<float> cFLOAT_TYPE("float");;
 static tDataType<bool> cBOOL_TYPE("bool");;

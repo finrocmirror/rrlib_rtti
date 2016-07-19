@@ -283,18 +283,6 @@ void tType::AddAnnotationImplementation(tTypeAnnotation* annotation, bool (*anno
   }
 }
 
-void tType::DeepCopy(const void* source, void* destination, tFactory* factory) const
-{
-  if (info)
-  {
-    info->DeepCopy(source, destination, factory);
-  }
-  else
-  {
-    RRLIB_LOG_PRINT(ERROR, "Cannot deep copy using NULL type.");
-  }
-}
-
 tType tType::FindType(const std::string& name)
 {
   if (name.compare("NULL") == 0)
@@ -474,7 +462,7 @@ tType::tInfo::tInfo(tType::tClassification classification, const char* rtti_name
   uid(-1),
   element_type(NULL),
   list_type(NULL),
-  shared_ptr_list_type(NULL),
+  underlying_type(nullptr),
   binary(),
   enum_strings(NULL),
   non_standard_enum_value_strings()

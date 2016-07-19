@@ -76,6 +76,7 @@ tDataType<T>::tDataTypeInfoBase::tDataTypeInfoBase(tType::tClassification classi
   size = sizeof(T);
   generic_object_size = sizeof(tGenericObjectInstance<T>);
   type_traits = tTypeTraitsVector<T>::value;
+  underlying_type = (!std::is_same<typename UnderlyingType<T>::type, T>::value) ? tDataType<typename UnderlyingType<T>::type>::GetDataTypeInfo() : this;
   binary = GetBinaryCurrentlyPerformingStaticInitialization();
 #if RRLIB_RTTI_BINARY_DETECTION_ENABLED
   if (binary.length() > 0)
