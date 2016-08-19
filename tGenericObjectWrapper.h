@@ -43,7 +43,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
-#include "rrlib/rtti/detail/tGenericObjectBaseImpl.h"
+#include "rrlib/rtti/tGenericObject.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -65,7 +65,7 @@ namespace rtti
  * Allows wrapping an existing object as tGenericObject
  */
 template <typename T>
-class tGenericObjectWrapper : public detail::tGenericObjectBaseImpl<typename NormalizedType<T>::type>
+class tGenericObjectWrapper : public tGenericObject
 {
 
 //----------------------------------------------------------------------
@@ -73,9 +73,13 @@ class tGenericObjectWrapper : public detail::tGenericObjectBaseImpl<typename Nor
 //----------------------------------------------------------------------
 public:
 
-  tGenericObjectWrapper(T& wrapped_object) : detail::tGenericObjectBaseImpl<typename NormalizedType<T>::type>()
+  tGenericObjectWrapper(T& wrapped_object) : tGenericObject(&wrapped_object, tDataType<T>())
   {
-    this->wrapped = &wrapped_object;
+  }
+
+  ~tGenericObjectWrapper()
+  {
+    data = nullptr; // ensures that data is not destructed by this object
   }
 
 //----------------------------------------------------------------------

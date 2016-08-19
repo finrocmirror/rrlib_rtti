@@ -44,7 +44,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
-#include "rrlib/rtti/detail/tDataType.h"
+#include "rrlib/rtti/detail/tDataTypeInfo.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -55,6 +55,10 @@ namespace rtti
 {
 
 //----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
 // Class declaration
 //----------------------------------------------------------------------
 //! Runtime type information for T
@@ -63,29 +67,51 @@ namespace rtti
  * data type T.
  */
 template<typename T>
-class tDataType : public detail::tDataType<typename NormalizedType<T>::type>
+class tDataType : public tType
 {
-  typedef detail::tDataType<typename NormalizedType<T>::type> tBase;
+  typedef typename NormalizedType<T>::type tNormalizedType;
+  typedef detail::tDataTypeInfo<tNormalizedType> tInfo;
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
 //----------------------------------------------------------------------
 public:
 
-  tDataType() : tBase()
+  constexpr tDataType() : tType(&tInfo::value.data_type_info)
   {
   }
 
   /*!
    * Custom name may only be specified on first instantiation of a tDataType<T> for each type T
    *
-   * \param name Name data type should get (if different from default)
+   * \param name Name data type should get (if different from default). Only string literals should be passed to this functions.
    */
-  tDataType(const std::string& name) : tBase(name)
+  template <size_t Tchars>
+  tDataType(const char(&name)[Tchars]) : tType(&tInfo::value.data_type_info)
+  {
+    GetSharedInfo().SetName(util::tManagedConstCharPointer(name, false), &tInfo::value.data_type_info);
+  }
+};
+
+template<typename T>
+class tDataType<std::vector<T>> : public tType
+{
+  typedef typename NormalizedType<T>::type tNormalizedType;
+  typedef detail::tDataTypeInfo<tNormalizedType> tInfo;
+  static_assert(!IsStdVector<T>::value, "");
+  static_assert(!IsStdVector<tNormalizedType>::value, "");
+
+//----------------------------------------------------------------------
+// Public methods and typedefs
+//----------------------------------------------------------------------
+public:
+
+  constexpr tDataType() : tType(&tInfo::value.list_type_info)
   {
   }
 };
 
+// Types defined in this library
 extern template class tDataType<serialization::tMemoryBuffer>;
 extern template class tDataType<int8_t>;
 extern template class tDataType<int16_t>;

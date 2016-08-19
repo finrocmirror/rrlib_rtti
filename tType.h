@@ -56,29 +56,24 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "rrlib/rtti/detail/tTypeInfo.h"
+#include "rrlib/rtti/generic_operations.h"
+#include "rrlib/rtti/type_traits.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
 //----------------------------------------------------------------------
 namespace rrlib
 {
+namespace rtti
+{
 
 //----------------------------------------------------------------------
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
-namespace serialization
-{
-class tInputStream;
-class tOutputStream;
-class tStringInputStream;
-class tStringOutputStream;
-}
 
-namespace rtti
-{
-class tTypeAnnotation;
 class tGenericObject;
-class tFactory;
+struct tGenericObjectDestructorCall;
 
 //----------------------------------------------------------------------
 // Class declaration
@@ -102,67 +97,96 @@ class tFactory;
  */
 class tType
 {
-protected:
-  struct tInfo;
-
-  /*! Maximum number of annotations per type */
-  enum { cMAX_ANNOTATIONS = 10 };
 
 //----------------------------------------------------------------------
 // Public methods and typedefs
 //----------------------------------------------------------------------
 public:
 
-  /*! Classifies wrapped type */
-  enum class tClassification
-  {
-    PLAIN, LIST, PTR_LIST, NULL_TYPE, OTHER, UNKNOWN
-  };
-
-  tType() : info(NULL) {}
+  constexpr tType() : info(&detail::tTypeInfo::cNULL_TYPE_INFO) {}
 
   /*!
    * Add annotation to this data type.
+   * Annotations added to the null/empty-type are discarded.
+   * Adding annotations is not supported during static variable initialization phase (they might be zeroed out afterwards).
    *
-   * \param annotation Annotation (may only be added to one data type. Is deleted automatically on data type destruction.)
-   * \tparam T Annotation type. Must be derived from tDataTypeAnnotation.
-   *           T is used for lookup later (may also be a base class of annotation).
-   *           Only one annotation object per type T may be added
+   * \param annotation Type of annotation to add (is copied)
+   *                   Requirements for suitable data types for annotations are
+   *                   - SupportsBitwiseCopy<T>::value is true
+   *                   - IsDefaultConstructionZeroMemory<T>::value
+   *                   - sizeof(T) <= 2 * sizeof(void*)
+   * \tparam T Annotation type.
+   *           T is used for lookup later.
+   *           Only one annotation object per type T may be added. A second call will overwrite the first value.
    */
   template <typename T>
-  inline void AddAnnotation(T* annotation)
+  inline void AddAnnotation(const T& annotation)
   {
-    AddAnnotationImplementation(annotation, AnnotationIndexValid<T>, tAnnotationIndex<T>::index);
-  }
-
-  /*!
-   * \param placement (Optional) Destination for placement new (needs to have at least size GetSize(emplace_generic_object))
-   * \param emplace_generic_object If placement is specified: place generic objects at this memory address (true) or only data (false)?
-   * \return Instance of data type wrapped as tGenericObject
-   */
-  inline tGenericObject* CreateInstanceGeneric(void* placement = NULL, bool emplace_generic_object = true) const
-  {
-    if (info)
+    static_assert(sizeof(annotation) <= 2 * sizeof(void*) && SupportsBitwiseCopy<T>::value && IsDefaultConstructionZeroMemory<T>::value, "Annotation type is unsuitable");
+    if (info != &detail::tTypeInfo::cNULL_TYPE_INFO)
     {
-      return info->CreateInstanceGeneric(placement, emplace_generic_object);
+      GetSharedInfo().AddAnnotation(annotation);
     }
-    return NULL;
   }
 
   /*!
-   * Deep copy objects (no-op with null-type)
+   * Adds name for lookup of this data type (e.g. to support legacy data type names)
    *
-   * \param source Source object
-   * \param destination Destination object
-   * \param factory Factory to use (optional, required for pointer lists etc.)
+   * \param name Another name supported for lookup
    */
-  inline void DeepCopy(const void* source, void* destination, tFactory* factory = nullptr) const
+  inline tType& AddName(const char* name)
   {
-    if (info)
+    detail::tTypeInfo::tSharedInfo::AddName(info, name);
+    return *this;
+  }
+
+  /*!
+   * Creates object of this data type wrapped as tGenericObject
+   *
+   * \return Instance of data type wrapped as tGenericObject (caller is responsible for deleting)
+   */
+  inline tGenericObject* CreateInstanceGeneric() const;
+
+  /*!
+   * Destruct object instance at specified memory address.
+   *
+   * \param address Address where previously constructed object is located (if nullptr, nothing is done)
+   */
+  inline void DestructInstance(void* address) const
+  {
+    if ((info->type_traits & (trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cHAS_TRIVIAL_DESTRUCTOR | trait_flags::cIS_DATA_TYPE)) == trait_flags::cIS_DATA_TYPE && address)
     {
-      info->DeepCopy(source, destination, factory);
+      (*GetBinaryOperations().destructor)(address);
     }
   }
+
+  /*!
+   * Default-construct object at specified memory address.
+   * Caller must ensure that
+   * (1) memory is valid and large enough
+   * (2) objects with non-trivial destructor are properly destructed using DestructInstance function above
+   *
+   * \param placement Address to create object at (destination for placement new)
+   */
+  inline void EmplaceInstance(void* placement) const
+  {
+    if ((info->type_traits & (trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY | trait_flags::cIS_DATA_TYPE)) == trait_flags::cIS_DATA_TYPE)
+    {
+      (*GetBinaryOperations().constructor)(placement);
+    }
+    else
+    {
+      memset(placement, 0, info->size);
+    }
+  }
+
+  /*!
+   * Creates object of this data type wrapped as tGenericObject at specified memory address
+   *
+   * \param placement Destination for placement new (needs to have at least size GetSize(true))
+   * \return Instance of data type wrapped as tGenericObject. Smart Pointer ensures that destructor on emplaced instance is called (-> smart pointer must not be destructed as long as object is in use)
+   */
+  inline std::unique_ptr<tGenericObject, tGenericObjectDestructorCall> EmplaceInstanceGeneric(void* placement) const;
 
   /*!
    * Lookup data type by name.
@@ -172,84 +196,56 @@ public:
    * 2) if 'name' contains a namespace, a type with the same name but without namespace will be returned as a match
    *
    * \param name Data Type name
-   * \return Data type with specified name (== NULL if it could not be found)
+   * \return Data type with specified name (== nullptr if it could not be found)
    */
-  static tType FindType(const std::string& name);
+  static inline tType FindType(const std::string& name)
+  {
+    return detail::tTypeInfo::FindType(name);
+  }
 
   /*!
    * Lookup data type by rtti name
    *
    * \param rtti_name rtti name
-   * \return Data type with specified name (== NULL if it could not be found)
+   * \return Data type with specified name (== nullptr if it could not be found)
    */
-  static tType FindTypeByRtti(const char* rtti_name);
+  static inline tType FindTypeByRtti(const char* rtti_name)
+  {
+    return detail::tTypeInfo::FindTypeByRtti(rtti_name);
+  }
 
   /*!
    * Get annotation of specified class
    *
-   * \param c Class of annotation we're looking for
-   * \return Annotation. Null if data type has no annotation of this type.
+   * \tparam T Class of annotation to obtain
+   * \return Annotation. Zero-Default-constructed object if annotation has not been set for this type.
    */
   template <typename T>
-  inline T* GetAnnotation() const
+  inline T GetAnnotation() const
   {
-    return info ? static_cast<T*>(info->annotations[tAnnotationIndex<T>::index]) : NULL;
-  }
-
-  /*!
-   * \param include_path Return file name including the path name?
-   * \return binary file that initializes data type statically.
-   * On non-Linux platforms this always returns the empty string.
-   */
-  const std::string GetBinary(bool include_path) const
-  {
-    if (info)
+    if (detail::tTypeInfo::tSharedInfo::tAnnotationIndexHolder<T>::index.second)
     {
-      if (include_path || info->binary.find('/') == std::string::npos)
-      {
-        return info->binary;
-      }
-      else
-      {
-        return info->binary.substr(info->binary.rfind('/') + 1);
-      }
+      T t;
+      memcpy(&t, &GetSharedInfo().annotations[detail::tTypeInfo::tSharedInfo::tAnnotationIndexHolder<T>::index.first], sizeof(T));
+      return t;
     }
-    return "";
+    return T();
   }
 
   /*!
-   * Obtain type name in rrlib::rtti format
-   * (no 't' prefixes; '.' instead of '::' for namespace separation; e.g. "rrlib.distance_data.DistanceData")
-   * from rtti type name.
-   *
-   * \param rtti Mangled rtti type name
-   * \param remove_namespaces Remove namespaces from type names? (should only be used if name collisions are not an issue or cannot occur)
-   * \return (Demangled) type name in rrlib::rtti format
-   */
-  static std::string GetTypeNameFromRtti(const char* rtti, bool remove_namespaces = false);
-
-  /*!
-   * \return In case of list: type of elements
+   * \return In case of list: type of elements; otherwise null-type
    */
   inline tType GetElementType() const
   {
-    return tType(info ? info->element_type : NULL);
+    return IsListType() ? GetType(GetSharedInfo().uid[0]) : tType();
   }
 
   /*!
-   * \return Pointer to enum strings data if this is an enum type - otherwise NULL
+   * \return Pointer to enum strings data if this is an enum type - otherwise nullptr
    */
-  const make_builder::internal::tEnumStrings* GetEnumStringsData()
+  inline const make_builder::internal::tEnumStrings* GetEnumStringsData() const
   {
-    return info ? info->enum_strings : NULL;
-  }
-
-  /*!
-   * \return Vector with all numeric constants in string representation if this is an enum with custom (non-standard) values - otherwise NULL (for an enum meaning we have: 0, 1, 2, ..., n)
-   */
-  const std::vector<std::string>* GetNonStandardEnumValueStrings()
-  {
-    return info && info->non_standard_enum_value_strings.size() ? &info->non_standard_enum_value_strings : NULL;
+    return info->type_traits & trait_flags::cIS_ENUM ? &static_cast<detail::tTypeInfo::tSharedInfoEnum&>(GetSharedInfo()).enum_strings : nullptr;
   }
 
   /*!
@@ -257,78 +253,82 @@ public:
    */
   inline tType GetListType() const
   {
-    return tType(info ? info->list_type : NULL);
+    return (info->type_traits & (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE)) == (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE) ? GetType(GetSharedInfo().uid[1]) : tType();
   }
 
   /*!
-   * \param without_namespace Return name of data type without any namespaces?
+   * (this is not particularly efficient as it allocates memory - use alternatives such as GetPlainTypeName() or stream operators if efficiency/real-time is desired)
+   *
    * \return Name of data type
    */
-  inline const std::string& GetName(bool without_namespace = false) const
+  std::string GetName() const
   {
-    static const std::string null_type_string = "NULL";
-    return info ? (without_namespace ? info->short_name : info->name) : null_type_string;
+    if (IsListType())
+    {
+      size_t length = strlen(GetSharedInfo().name.Get());
+      char buffer[length + 10];
+      memcpy(buffer, "List<", 5);
+      memcpy(buffer + 5, GetSharedInfo().name.Get(), length);
+      buffer[5 + length] = '>';
+      buffer[6 + length] = 0;
+      return buffer;
+    }
+    return GetSharedInfo().name.Get();
+  }
+
+  /*!
+   * \return Returns type name of plain/element type (this is == GetName() for all non-list types T; for std::vector<T> it is, however, also the one for T)
+   */
+  const char* GetPlainTypeName() const
+  {
+    return GetSharedInfo().name.Get();
   }
 
   /*!
    * \return rtti name of data type  (note that this is the 'normalized' type for integral types - e.g. "i" for 'long' on 32 bit platforms)
    */
-  const char* GetRttiName() const
+  inline const char* GetRttiName() const
   {
-    return info ? info->rtti_name : typeid(void).name();
-  }
-
-  /*!
-   * \return Demangled rtti name of data type
-   */
-  inline const std::string& GetRttiNameDemangled() const
-  {
-    static const std::string null_type_string = "NULL";
-    return info ? info->demangled_rtti_name : null_type_string;
+    return info->std_type_info.name();
   }
 
   /*!
    * \param Obtain size as generic object?
-   * \return size of data type (as returned from sizeof(T) or sizeof(tGenericObjectInstance<T>))
+   * \return size of data type (as returned from sizeof(T) or sizeof(tGenericObject) + sizeof(T))
    */
-  size_t GetSize(bool as_generic_object = false) const
-  {
-    return info ? (as_generic_object ? info->generic_object_size : info->size) : 0;
-  }
-
-  /*!
-   * \return returns "Type" of data type (see enum)
-   */
-  inline tClassification GetType() const
-  {
-    return info ? info->type : tClassification::NULL_TYPE;
-  }
+  inline size_t GetSize(bool as_generic_object = false) const;
 
   /*!
    * \param uid Data type uid
-   * \return Data type with specified uid (== NULL if there's no type with this uid)
+   * \return Data type with specified uid (== nullptr if there's no type with this uid)
    */
-  static tType GetType(int16_t uid);
+  static tType GetType(size_t uid)
+  {
+    return (uid < detail::tTypeInfo::tSharedInfo::registered_types->size()) ? (*detail::tTypeInfo::tSharedInfo::registered_types)[uid] : tType();
+  }
 
   /*!
    * \return Number of registered types
    */
-  static uint16_t GetTypeCount();
+  static size_t GetTypeCount()
+  {
+    return detail::tTypeInfo::tSharedInfo::registered_types->size();
+  }
 
   /*!
    * \return Bit vector of type traits determined at compile time (see type_traits.h)
    */
-  inline int GetTypeTraits() const
+  inline uint32_t GetTypeTraits() const
   {
-    return info ? info->type_traits : 0;
+    return info->type_traits;
   }
 
   /*!
    * \return uid of data type
    */
-  inline int16_t GetUid() const
+  inline uint16_t GetUid() const
   {
-    return info ? info->uid : -1;
+    return GetSharedInfo().uid[IsListType() ? 1 : 0];
   }
 
   /*!
@@ -336,28 +336,41 @@ public:
    */
   inline tType GetUnderlyingType() const
   {
-    return tType(info ? info->underlying_type : nullptr);
+    tType underlying_plain_type(GetSharedInfo().underlying_type);
+    return IsListType() ? underlying_plain_type.GetListType() : underlying_plain_type;
   }
 
+  /*!
+   * \return Is this a list type? (std::vector<T> of some type T)
+   */
+  inline bool IsListType() const
+  {
+    return (info->type_traits & (trait_flags::cIS_LIST_TYPE | trait_flags::cIS_DATA_TYPE)) == (trait_flags::cIS_LIST_TYPE | trait_flags::cIS_DATA_TYPE);
+  }
 
   /*!
-   * Can object of this data type be converted to specified type?
-   * (In C++ currently only returns true, when types are equal)
+   * Convenience function to register data type with specified type and name
    *
-   * \param data_type Other type
-   * \return Answer
+   * \tparam T Data type
+   * \param name Name of type (optional)
    */
-  inline bool IsConvertibleTo(const tType& data_type) const
+  template <typename T>
+  inline static tType& Register()
   {
-    return data_type == *this;
+    return tDataType<T>();
+  }
+  template <typename T>
+  inline static tType& Register(const char* name = nullptr)
+  {
+    return tDataType<T>(name);
   }
 
   /*!
-   * for checks against NULL (if (type == NULL) {...} )
+   * for checks against nullptr (if (type == nullptr) {...} )
    */
-  bool operator== (void* info_ptr) const
+  bool operator== (std::nullptr_t* ptr) const
   {
-    return info == info_ptr;
+    return info == &detail::tTypeInfo::cNULL_TYPE_INFO;
   }
 
   bool operator== (const tType& other) const
@@ -365,9 +378,9 @@ public:
     return info == other.info;
   }
 
-  bool operator!= (void* info_ptr) const
+  bool operator!= (std::nullptr_t* ptr) const
   {
-    return info != info_ptr;
+    return info != &detail::tTypeInfo::cNULL_TYPE_INFO;
   }
 
   bool operator!= (const tType& other) const
@@ -380,126 +393,67 @@ public:
     return info < other.info;
   }
 
-  /*!
-   * Deserialize object from input stream
-   *
-   * \param os InputStream
-   * \param obj Object to deserialize
-   */
-  void Deserialize(serialization::tInputStream& is, void* obj) const;
-
-  /*!
-   * Serialize object to output stream
-   *
-   * \param os OutputStream
-   * \param obj Object to serialize
-   */
-  void Serialize(serialization::tOutputStream& os, const void* obj) const;
-
 //----------------------------------------------------------------------
 // Protected information class
 //----------------------------------------------------------------------
 protected:
 
-  /*! Generic data type information */
-  struct tInfo : private util::tNoncopyable
+  friend class tTypedConstPointer;
+  friend class tTypedPointer;
+  friend struct detail::tTypeInfo;
+
+  constexpr tType(const detail::tTypeInfo* info) : info(info)
+  {}
+
+  /*!
+   * \return Reference to shared info
+   */
+  detail::tTypeInfo::tSharedInfo& GetSharedInfo() const
   {
-    /*! Type of data type */
-    const tType::tClassification type;
+    return *info->shared_info;
+  }
 
-    /*! Name of data type */
-    const std::string name;
+  /*!
+   * \return Binary operations of this object (a varying number of them exists - depending on flags)
+   */
+  const tBinaryOperations& GetBinaryOperations() const
+  {
+    return *reinterpret_cast<const tBinaryOperations*>(info + 1);
+  }
 
-    /*! Short name of data type */
-    const std::string short_name;
+  /*!
+   * \return Binary operations of this object (a varying number of them exists - depending on flags)
+   */
+  const tBinaryOperationsVector& GetBinaryOperationsVector() const
+  {
+    return *reinterpret_cast<const tBinaryOperationsVector*>(reinterpret_cast<const char*>(info) + sizeof(detail::tTypeInfo) + sizeof(tBinaryOperations));
+  }
 
-    /*! RTTI name */
-    const char* rtti_name;
+  /*!
+   * \return Binary operation functions (existence depends on flags)
+   */
+  const tBinarySerializationOperations& GetBinarySerialization() const
+  {
+    return *reinterpret_cast<const tBinarySerializationOperations*>(reinterpret_cast<const char*>(info) + (info->type_traits & trait_flags::cSERIALIZATION_FUNCTION_OFFSET_BITS));
+  }
 
-    /*! Demangled RTTI name */
-    const std::string demangled_rtti_name;
+  /*!
+   * \return Binary operation functions (existence depends on flags)
+   */
+  const tStringSerializationOperations& GetStringSerialization() const
+  {
+    return *reinterpret_cast<const tStringSerializationOperations*>(reinterpret_cast<const char*>(info) + (info->type_traits & trait_flags::cSERIALIZATION_FUNCTION_OFFSET_BITS) + ((info->type_traits & trait_flags::cIS_BINARY_SERIALIZABLE) ? sizeof(tBinarySerializationOperations) : 0));
+  }
 
-    /*! sizeof(T) */
-    size_t size;
-
-    /*! sizeof(tGenericObjectInstance<T>) */
-    size_t generic_object_size;
-
-    /*! Bit vector of type traits determined at compile time (see tTypeTraitVector) */
-    int type_traits;
-
-    /*! New info? */
-    bool new_info;
-
-    /*! Data type uid */
-    int16_t uid;
-
-    /*! In case of list: type of elements */
-    tInfo* element_type;
-
-    /*! In case of element: list type (std::vector<T>) */
-    tInfo* list_type;
-
-    /*! Contains pointer to underlying type (see UnderlyingType type trait) */
-    tInfo* underlying_type;
-
-    /*! Annotations to data type */
-    tTypeAnnotation* annotations[cMAX_ANNOTATIONS];
-
-    /*! binary file that initializes data type statically (includes path) */
-    std::string binary;
-
-    /*! pointer to enum string constants data - if this is an enum type */
-    const make_builder::internal::tEnumStrings* enum_strings;
-
-    /*! Strings of enum values - if they are custom (non-standard) */
-    std::vector<std::string> non_standard_enum_value_strings;
+  /*!
+   * \return Binary operation functions (existence depends on flags)
+   */
+  const tXMLSerializationOperations& GetXMLSerialization() const
+  {
+    return *reinterpret_cast<const tXMLSerializationOperations*>(reinterpret_cast<const char*>(info) + (info->type_traits & trait_flags::cSERIALIZATION_FUNCTION_OFFSET_BITS) + ((info->type_traits & trait_flags::cIS_BINARY_SERIALIZABLE) ? sizeof(tBinarySerializationOperations) : 0));
+  }
 
 
-    tInfo(tType::tClassification classification, const char* rtti_name, const std::string& name);
-
-    virtual ~tInfo();
-
-    /*!
-     * \param placement (Optional) Destination for placement new
-     * \param emplace_generic_object If placement is specified: place generic objects at this memory address (true) or only data (false)?
-     * \return Instance of Datatype as Generic object
-     */
-    virtual tGenericObject* CreateInstanceGeneric(void* placement = NULL, bool emplace_generic_object = true) const
-    {
-      return NULL;
-    }
-
-    /*!
-     * Deep copy objects
-     *
-     * \param src Src object
-     * \param dest Destination object
-     * \param f Factory to use
-     */
-    virtual void DeepCopy(const void* src, void* dest, tFactory* f) const;
-
-    virtual void Init() {}
-
-    /*!
-     * Deserialize object from input stream
-     *
-     * \param os InputStream
-     * \param obj Object to deserialize
-     */
-    virtual void Deserialize(serialization::tInputStream& is, void* obj) const;
-
-    /*!
-     * Serialize object to output stream
-     *
-     * \param os OutputStream
-     * \param obj Object to serialize
-     */
-    virtual void Serialize(serialization::tOutputStream& os, const void* obj) const;
-
-  };
-
-  tType(tInfo* info);
 
 //----------------------------------------------------------------------
 // Private fields and methods
@@ -507,43 +461,8 @@ protected:
 private:
 
   /*! Pointer to data type info (should not be copied every time for efficiency reasons) */
-  const tInfo* info;
-
-  /*! Helper struct for annotating types */
-  template <typename T>
-  struct tAnnotationIndex
-  {
-    static int index;
-  };
-
-  /*!
-   * Implementation of AddAnnotation function
-   */
-  void AddAnnotationImplementation(tTypeAnnotation* annotation, bool (*annotation_index_valid_function)(bool), int& annotation_index);
-
-  /*! Has specified type T a valid annotation index? */
-  template <typename T>
-  static bool AnnotationIndexValid(bool set_valid = false)
-  {
-    static bool valid = false;
-    if (set_valid)
-    {
-      assert(!valid);
-      valid = true;
-    }
-    return valid;
-  }
-
-  /*!
-   * \param type_name Type name (in rrlib::rtti) format
-   * \param The same type name without any namespaces (e.g. returns 'Pose2D' for 'rrlib.math.Pose2D')
-   */
-  static std::string RemoveNamespaces(const std::string& type_name);
-
+  const detail::tTypeInfo* info;
 };
-
-template <typename T>
-int tType::tAnnotationIndex<T>::index;
 
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& dt);
 serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& dt);
@@ -556,5 +475,6 @@ serialization::tStringInputStream& operator >> (serialization::tStringInputStrea
 }
 }
 
+#include "rrlib/rtti/tTypedPointer.h"
 
 #endif

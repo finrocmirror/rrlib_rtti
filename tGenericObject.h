@@ -45,13 +45,11 @@
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
 //----------------------------------------------------------------------
-#include "rrlib/serialization/serialization.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
-#include "rrlib/rtti/type_traits.h"
-#include "rrlib/rtti/tTypedObject.h"
+#include "rrlib/rtti/tTypedPointer.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -75,11 +73,17 @@ class tFactory;
  *
  * Provides base functionality such as deep copying, type information
  * and serialization for wrapped object.
- * It also asserts that casting back is only possible to the original type.
+ * It also asserts that casting back is only possible to the original/underlying type.
  *
  * This allows to handle objects in a uniform way.
+ *
+ * Unlike tTypedPointer, tGenericObject is also concerned with
+ * creation, destruction, and ownership of the object it points to.
+ * The wrapped pointer is never nullptr.
+ *
+ * Generic objects are constructed with the tType class.
  */
-class tGenericObject : public tTypedObject, private util::tNoncopyable
+class tGenericObject : private util::tNoncopyable
 {
 
 //----------------------------------------------------------------------
@@ -87,50 +91,109 @@ class tGenericObject : public tTypedObject, private util::tNoncopyable
 //----------------------------------------------------------------------
 public:
 
-  // to ensure that all generic objects have virtual destructor
-  virtual ~tGenericObject() {}
-
-  /*!
-   * Clear any shared resources that this object holds on to
-   * (e.g. for reusing object in pool)
-   */
-  virtual void Clear() = 0;
-
-  /*!
-   * Deep copy source object to this object
-   * (types MUST match)
-   *
-   * \param source Source object
-   */
-  inline void DeepCopyFrom(const tGenericObject& source, tFactory* f = NULL)
+  ~tGenericObject()
   {
-    assert((source.type == this->type) && "Types must match");
-    DeepCopyFrom(source.wrapped, f);
+    type.DestructInstance(data);
+    data = nullptr;
+  }
+
+  // only allow casting to const base classes - everything else would be dangerous
+  operator const tTypedConstPointer&() const
+  {
+    return reinterpret_cast<const tTypedConstPointer&>(*this);
+  }
+  operator const tTypedPointer&()
+  {
+    return reinterpret_cast<const tTypedPointer&>(*this);
   }
 
   /*!
-   * Does object equal other object?
-   * If rrlib_serialization is not present, this only works for types
-   * that have the == operator implemented (or the two objects share the same address)
+   * Deep copy data to data pointed to by this pointer.
+   * A deep copy means that the destination object must not change if the source object is modified or deleted.
+   * Serialization of source and destination objects are equal after calling this.
+   * Caller must ensure that source and destination have the same (underlying) type and are not nullptr.
    *
-   * (not very efficient/RT-capable - should therefore not be called regular loops)
-   *
-   * \return True, if...
-   *  1) both objects have the same address
-   *  2) the == operator returns true for both objects
-   *  3) T has trivial destructor and memcmp returns 0 (heuristic, however, I have never encountered a type where this is invalid)
-   *  4) rrlib_serialization is available and both objects are serialized to the same binary data (usually they are equal then)
+   * \param source Pointer to data to be copied
+   * \throws May throw std::exception on invalid arguments or other failure
    */
-  virtual bool Equals(const tGenericObject& other) = 0;
+  inline void DeepCopyFrom(const tTypedConstPointer& source)  // only non-const for tGenericObject
+  {
+    reinterpret_cast<const tTypedPointer&>(*this).DeepCopyFrom(source);
+  }
+
+  /*!
+   * Deserialize data from input stream
+   *
+   * \param stream Input stream
+   * \throws Throws std::exception on invalid data in stream
+   */
+  inline void Deserialize(serialization::tInputStream& stream)  // only non-const for tGenericObject
+  {
+    reinterpret_cast<const tTypedPointer&>(*this).Deserialize(stream);
+  }
+
+  /*!
+   * Deserialize data from input stream
+   *
+   * \param stream Input stream
+   * \throws Throws std::exception on invalid data in stream
+   */
+  inline void Deserialize(serialization::tStringInputStream& stream)  // only non-const for tGenericObject
+  {
+    reinterpret_cast<const tTypedPointer&>(*this).Deserialize(stream);
+  }
+
+  /*!
+   * Deserialize data from XML node
+   *
+   * \param node XML node
+   * \throws Throws std::exception on invalid data in XML node
+   */
+  void Deserialize(const xml::tNode& node)  // only non-const for tGenericObject
+  {
+    reinterpret_cast<const tTypedPointer&>(*this).Deserialize(node);
+  }
+
+  /*!
+   * Deserialize data from binary input stream - possibly using non-binary encoding.
+   *
+   * \param stream Binary input stream
+   * \param encoding Encoding to use
+   */
+  void Deserialize(serialization::tInputStream& stream, serialization::tDataEncoding encoding)  // only non-const for tGenericObject
+  {
+    reinterpret_cast<const tTypedPointer&>(*this).Deserialize(stream, encoding);
+  }
+
+  /*!
+   * Returns whether data of two pointers is equal.
+   * Serializing equal objects must produce identical data.
+   *
+   * \param other Data to compare with
+   */
+  bool Equals(const tTypedConstPointer& other) const
+  {
+    return reinterpret_cast<const tTypedConstPointer&>(*this).Equals(other);
+  }
+
+  /*!
+   * Same as Equals, but also returns true if only underlying types are equal.
+   *
+   * \param other Data to compare with
+   */
+  bool EqualsUnderlying(const tTypedConstPointer& other) const
+  {
+    return reinterpret_cast<const tTypedConstPointer&>(*this).EqualsUnderlying(other);
+  }
 
   /*!
    * \return Wrapped object (type T must match original type)
    */
   template <typename T>
-  const T& GetData() const
+  inline const T& GetData() const
   {
     assert(typeid(typename NormalizedType<T>::type).name() == type.GetRttiName());
-    return *static_cast<const T*>(wrapped);
+    return *static_cast<const T*>(data);
   }
 
   /*!
@@ -140,84 +203,116 @@ public:
   inline T& GetData()
   {
     assert(typeid(typename NormalizedType<T>::type).name() == type.GetRttiName());
-    return *static_cast<T*>(wrapped);
+    return *static_cast<T*>(data);
   }
 
   /*!
-   * Raw void pointer to wrapped object
+   * \return Raw void pointer to wrapped object
    */
   inline void* GetRawDataPointer()
   {
-    return wrapped;
+    return data;
   }
-
-  /*!
-   * Raw void pointer to wrapped object
-   */
   inline const void* GetRawDataPointer() const
   {
-    return wrapped;
+    return data;
   }
 
-  // Generic serialization
-  virtual void Deserialize(serialization::tInputStream& stream) = 0;
-  virtual void Deserialize(serialization::tStringInputStream& stream) = 0;
-#ifdef _LIB_RRLIB_XML_PRESENT_
-  virtual void Deserialize(const xml::tNode& node) = 0;
-#endif
-  virtual void Serialize(serialization::tOutputStream& stream) const = 0;
-  virtual void Serialize(serialization::tStringOutputStream& stream) const = 0;
-#ifdef _LIB_RRLIB_XML_PRESENT_
-  virtual void Serialize(xml::tNode& node) const = 0;
-#endif
+  /*!
+   * \ŗeturn Type information for object
+   */
+  inline const tType& GetType() const
+  {
+    return type;
+  }
 
   /*!
-   * Deserialize data from binary input stream - possibly using non-binary encoding.
+   * Obtain element from vector.
    *
-   * \param is Binary input stream
-   * \param enc Encoding to use
+   * \param data Data pointer
+   * \param size Index of element
+   * \return
+   * - If this points to std::vector, returns &std::vector[index]
+   * - Otherwise, returns this object if index == 0
+   * \throws Throws std::invalid_argument if index is >= of what is returned by tGetVectorSize
    */
-  void Deserialize(serialization::tInputStream& stream, serialization::tDataEncoding enc);
+  inline tTypedPointer GetVectorElement(size_t index)
+  {
+    return reinterpret_cast<const tTypedPointer&>(*this).GetVectorElement(index);
+  }
+  inline tTypedConstPointer GetVectorElement(size_t index) const
+  {
+    return reinterpret_cast<const tTypedPointer&>(*this).GetVectorElement(index);
+  }
+
+  /*!
+   * \param data Data pointer
+   * \return
+   * - If this points to std::vector, returns std::vector::size()
+   * - If nullptr, returns 0
+   * - Otherwise, returns 1
+   */
+  inline size_t GetVectorSize() const
+  {
+    return reinterpret_cast<const tTypedConstPointer&>(*this).GetVectorSize();
+  }
+
+  /*!
+   * Resizes std::vector.
+   *
+   * \param data Pointer to std::vector
+   * \param new_size New size
+   * \throws Throws std::invalid_argument 'data' does not point std::vector
+   */
+  void ResizeVector(size_t new_size)
+  {
+    reinterpret_cast<const tTypedPointer&>(*this).ResizeVector(new_size);
+  }
+
+  /*!
+   * Serialize data
+   *
+   * \param target Target to serialize to (output stream or XML node)
+   */
+  template <typename TTarget>
+  inline void Serialize(TTarget& target) const
+  {
+    reinterpret_cast<const tTypedConstPointer&>(*this).Serialize(target);
+  }
 
   /*!
    * Serialize data to binary output stream - possibly using non-binary encoding.
    *
-   * \param os Binary output stream
-   * \param enc Encoding to use
+   * \param stream Binary output stream
+   * \param encoding Encoding to use
    */
-  void Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding enc) const;
+  void Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding encoding) const
+  {
+    reinterpret_cast<const tTypedConstPointer&>(*this).Serialize(stream, encoding);
+  }
 
 //----------------------------------------------------------------------
 // Protected fields and constructors
 //----------------------------------------------------------------------
 protected:
 
-  /*! Wrapped object */
-  void* wrapped;
+  friend class tType;
 
-
-  /*!
-   * \param wrapped Wrapped object
-   * \param dt Data Type of wrapped object
-   */
-  tGenericObject(tType dt) :
-    wrapped()
+  tGenericObject(void* pointer, const tType& type) : data(pointer), type(type)
   {
-    this->type = dt;
+    assert((pointer == nullptr || (type.GetTypeTraits() & trait_flags::cIS_DATA_TYPE)) && "Only data types are valid");
   }
+
+  /*! Raw pointer to data/object */
+  void* data;
+
+  /*! Runtime type information for the data/object that 'data' points to */
+  tType type;
 
 //----------------------------------------------------------------------
 // Private fields and methods
 //----------------------------------------------------------------------
 private:
-
-  /*!
-   * Deep copy source object to this object
-   * (types MUST match)
-   *
-   * \param source Source object
-   */
-  virtual void DeepCopyFrom(const void* source, tFactory* f) = 0;
 
 };
 
@@ -227,5 +322,6 @@ private:
 }
 }
 
+#include "rrlib/rtti/tType.hpp"
 
 #endif

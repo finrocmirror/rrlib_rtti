@@ -42,6 +42,7 @@
 // Internal includes with ""
 //----------------------------------------------------------------------
 #include "rrlib/rtti/tDataType.h"
+#include "rrlib/rtti/tGenericObjectWrapper.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -55,23 +56,9 @@ namespace rtti
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 
-#ifndef RRLIB_RTTI_BINARY_DETECTION_ENABLED
-#if __linux__
-#define RRLIB_RTTI_BINARY_DETECTION_ENABLED 1
-#else
-#define RRLIB_RTTI_BINARY_DETECTION_ENABLED 0
-#endif
-#endif
-
 //----------------------------------------------------------------------
 // Function declarations
 //----------------------------------------------------------------------
-
-/*!
- * \return If a .so-file currently performs static initializations - returns name of .so file.
- * On non-Linux platforms this always returns the empty string.
- */
-std::string GetBinaryCurrentlyPerformingStaticInitialization();
 
 /*!
  * Resize vector (also works for vectors with noncopyable types)

@@ -27,6 +27,7 @@
  *
  * Various type traits required for rrlib_rtti.
  * Most of them can be specialized.
+ * Further type traits related to generic operations are defined in generic_operations.h
  *
  */
 //----------------------------------------------------------------------
@@ -42,10 +43,9 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
-#include "rrlib/rtti/tType.h"
-#include "rrlib/rtti/tIsListType.h"
-#include "rrlib/rtti/detail/generic_operations.h"
+#include "rrlib/rtti/generic_operations.h"
 #include "rrlib/rtti/detail/type_traits.h"
+#include "rrlib/rtti/detail/tTypeInfo.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -60,6 +60,8 @@ namespace rtti
 //----------------------------------------------------------------------
 template <typename T>
 class tDataType;
+
+typedef util::tManagedConstCharPointer(*tGetTypenameFunction)(const tType& type);
 
 //----------------------------------------------------------------------
 // Function declarations
@@ -91,67 +93,162 @@ struct IsImplicitlyConvertible
  * Type trait that can be specialized to indicate that type T and 'type' share the same memory layout and basic binary operations.
  * This means specifically:
  * (1) identical default-construction & destruction
- * (2) identical serialization & deserialization
- * (3) identical DeepCopy() & Equals()  (see GenericOperations below)
- * (4) (1)-(3) are also true for std::vector<T> and std::vector<type>
- * (5) Casting from T to 'type' could safely be done with a reinterpret_cast.
+ * (2) identical DeepCopy() & Equals()  (see GenericOperations below)
+ * (3) (1) and (2) are also true for std::vector<T> and std::vector<type>
+ * (4) Casting from T to 'type' is possible (option will be offered by rrlib_rtti_conversion) and could safely be done with a reinterpret_cast<type&>.
  *
  * This is e.g. true for some wrapper classes (e.g. in rrlib_si_units) - and allows for major optimizations in rrlib_rrti type handling.
+ * (With respect to enums, std::underlying_type has similarities to the trait defined here.)
  *
- * In this sense, signed integral types can be seen as having unsigned integral types as underlying types - which is defined below.
+ * In this sense, enum and signed integral types can be seen as having unsigned integral types as underlying types - which is defined below.
+ * The template needs to be specialized to support further types.
  *
- * Note: Operations (1) to (3) need not be defined for type T in order to be usable with rrlib_rtti - only for type 'type'
+ * Note: Operations (1), (2) and possibly binary serialization need not be defined for type T in order to be usable with rrlib_rtti - only for type 'type'.
+ *       Binary serialization & deserialization needs to be defined for T if cBINARY_SERIALIZATION_DIFFERS is set.
  */
 template <typename T>
 struct UnderlyingType
 {
   /*! Does not need to be defined by specializations */
-  enum { cSIGNED_INTEGRAL_TYPE = std::is_integral<T>::value && std::is_signed<T>::value };
-  typedef typename std::conditional<cSIGNED_INTEGRAL_TYPE, T, int>::type tIntegralType;
+  enum tEnum { cENUM_TYPE = std::is_enum<T>::value };
+  typedef typename std::conditional<cENUM_TYPE, typename std::underlying_type<typename std::conditional<cENUM_TYPE, T, tEnum>::type>::type, T>::type tNonEnum;
+  enum { cSIGNED_INTEGRAL_TYPE = std::is_integral<tNonEnum>::value && std::is_signed<tNonEnum>::value };
+  typedef typename std::conditional<cSIGNED_INTEGRAL_TYPE, typename std::make_unsigned<typename std::conditional<cSIGNED_INTEGRAL_TYPE, tNonEnum, int>::type>::type, tNonEnum>::type tUnsigned;
 
-  /*! underlying type; set to T if T does not wrap another type as specified above */
-  typedef typename std::conditional<cSIGNED_INTEGRAL_TYPE, typename std::make_unsigned<tIntegralType>::type, T>::type type;
+  /*! underlying type; is set to T if T does not wrap another type as specified in trait specification */
+  typedef tUnsigned type;
 
   /*!
    * True if 'type' can safely be converted to 'T' using a reinterpret_cast.
    * This should not be set to true if e.g. the constructor of T checks or limits values.
    */
-  enum { reverse_cast_valid = cSIGNED_INTEGRAL_TYPE || std::is_same<T, type>::value };
+  enum { cREVERSE_CAST_VALID = cSIGNED_INTEGRAL_TYPE || std::is_same<T, type>::value };
+
+  /*! True if types T and 'type' have different binary serialization */
+  enum { cBINARY_SERIALIZATION_DIFFERS = cENUM_TYPE };
+
+  /*! True if types T and 'type' have different string and/or XML serialization */
+  enum { cOTHER_SERIALIZATION_DIFFERS = true };
 };
 
 template <typename T>
 struct UnderlyingType<std::vector<T>>
 {
   typedef std::vector<typename UnderlyingType<T>::type> type;
-  enum { reverse_cast_valid = UnderlyingType<T>::reverse_cast_valid };
+  enum { cREVERSE_CAST_VALID = UnderlyingType<T>::cREVERSE_CAST_VALID };
+  enum { cBINARY_SERIALIZATION_DIFFERS = UnderlyingType<T>::cBINARY_SERIALIZATION_DIFFERS };
+  enum { cOTHER_SERIALIZATION_DIFFERS = UnderlyingType<T>::cOTHER_SERIALIZATION_DIFFERS };
 };
 
 /*!
  * Type trait that defines whether an object of type T can be safely deep-copied
  * using memcpy and whether equality can be tested using memcmp.
+ *
+ * Should the default implementation be inadequate for some type T, it needs to be specialized.
  */
 template <typename T>
 struct SupportsBitwiseCopy
 {
   // std::is_trivially_destructible<T> is a heuristic. However, I have never encountered a type where this is invalid.
-  enum { value = std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) && (!std::is_polymorphic<T>::value) };
+  enum { value = (std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) && (!std::is_polymorphic<T>::value)) ||
+                 std::conditional < !std::is_same<typename UnderlyingType<T>::type, T>::value, SupportsBitwiseCopy<typename UnderlyingType<T>::type>, std::false_type >::type::value
+       };
+
 };
 
+/*!
+ * Type trait that determines whether std::vector<T> is supported by rrlib_rtti.
+ * May need to be specialized if inadequate for some type T.
+ */
+template <typename T>
+struct IsVectorTypeSupported
+{
+  enum { value = (!serialization::IsSerializableContainer<T>::value) && (std::is_move_constructible<T>::value || std::is_copy_constructible<T>::value || std::is_move_assignable<T>::value || std::is_copy_assignable<T>::value) };
+};
+
+/*!
+ * Type trait that defines whether an object of default-constructing an object of type T is equivalent
+ * to zeroing the memory it occupies.
+ *
+ * Should the default implementation be inadequate for some type T, it needs to be specialized.
+ */
+template <typename T>
+struct IsDefaultConstructionZeroMemory
+{
+  enum { value = SupportsBitwiseCopy<T>::value };
+};
+
+/*!
+ * Type trait that defines the rrlib_rtti name of a type.
+ * Template can be specialized for types in order to give them other names
+ * (possibly because they are more readable - or to retain backward-compatibility).
+ * Notably, a name can also be specified in the tDataType() constructor.
+ * This type trait, however, is useful for defining default names for templates.
+ */
+template <typename T>
+struct TypeName
+{
+  enum { cTYPE_DEFINED_IN_RRLIB_RTTI_WITH_NONSTANDARD_NAME = std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_same<T, std::string>::value || std::is_same<T, bool>::value || std::is_same<T, rrlib::time::tDuration>::value || std::is_same<T, rrlib::time::tTimestamp>::value };
+
+  static constexpr tGetTypenameFunction value = cTYPE_DEFINED_IN_RRLIB_RTTI_WITH_NONSTANDARD_NAME ? &detail::tTypeInfo::GetTypeNameDefinedInRRLibRtti : &detail::tTypeInfo::GetDefaultTypeName;
+};
+
+/*!
+ * This trait defines which other types should be registered (if they have not been already)
+ * when a tDataType<T> object is created.
+ *
+ * Typically, if e.g. tDataType<int> is created, tDataType<std::vector<int>> is also registered
+ */
+template <typename T>
+struct AutoRegisterRelatedTypes
+{
+  static void Register()
+  {
+  }
+};
+
+
+/*! Type trait that returns whether type T is a std::vector */
+template <typename T>
+struct IsStdVector
+{
+  enum { value = false };
+};
+template <typename T>
+struct IsStdVector<std::vector<T>>
+{
+  enum { value = true };
+};
 
 
 namespace trait_flags
 {
 
-// Bits for different traits (note regarding order: the first nine are interesting for other runtime environments in Finroc)
-static const int cIS_BINARY_SERIALIZABLE = 1 << 0;
-static const int cIS_STRING_SERIALIZABLE = 1 << 1;
-static const int cIS_XML_SERIALIZABLE = 1 << 2;
-static const int cIS_ENUM = 1 << 3;
-static const int cUNDERLYING_TYPE = 1 << 4;
-static const int cCAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 5;
-static const int cREINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID = 1 << 6;
-static const int cCAST_FROM_UNDERLYING_TYPE_IMPLICIT = 1 << 7;
-static const int cSUPPORTS_BITWISE_COPY = 1 << 8;
+// Bits for different traits
+static const int cIS_LIST_TYPE = 1;                          // position 1 - so that (flags & 1) is index in uid list
+static const int cSERIALIZATION_FUNCTION_OFFSET_BITS = 0x7E; // offset of serialization operation function pointers (flags & cSERIALIZATION_OFFSET_BITS is offset from tTypeInfo pointer)
+static const int cBINARY_OPERATION_FUNCTION_POINTERS = 0x80;
+
+static const int cIS_BINARY_SERIALIZABLE = 1 << 8;
+static const int cIS_STRING_SERIALIZABLE = 1 << 9;
+static const int cIS_XML_SERIALIZABLE = 1 << 10;
+static const int cIS_ENUM = 1 << 11;
+static const int cIS_DATA_TYPE = 1 << 12;
+static const int cIS_RPC_TYPE = 1 << 13;
+static const int cHAS_LIST_TYPE = 1 << 14;
+
+static const int cHAS_UNDERLYING_TYPE = 1 << 15;
+static const int cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 16;
+static const int cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID = 1 << 17;
+static const int cIS_CAST_FROM_UNDERLYING_TYPE_IMPLICIT = 1 << 18;
+static const int cSUPPORTS_BITWISE_COPY = 1 << 19;
+//static const int cHAS_DIFFERENT_BINARY_SERIALIZATION_THAN_UNDERLYING_TYPE = 1 << 20;
+
+static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 20;
+static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 21;
+static const int cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY = 1 << 22;
+/*static const int cIS_INTEGRAL = 1 << 22;
+static const int cIS_SIGNED = 1 << 23;
 
 static const int cIS_ABSTRACT = 1 << 16;
 static const int cIS_ARITHMETIC = 1 << 17;
@@ -159,15 +256,11 @@ static const int cIS_ARRAY = 1 << 18;
 static const int cIS_CLASS = 1 << 19;
 static const int cIS_EMPTY = 1 << 20;
 static const int cIS_FLOATING_POINT = 1 << 21;
-static const int cIS_INTEGRAL = 1 << 22;
 static const int cIS_OBJECT = 1 << 23;
 static const int cIS_POD = 1 << 24;
 static const int cIS_POINTER = 1 << 25;
 static const int cIS_SCALAR = 1 << 26;
-static const int cIS_SIGNED = 1 << 27;
-static const int cIS_UNSIGNED = 1 << 28;
-static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 29;
-static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 30;
+static const int cIS_UNSIGNED = 1 << 28;*/
 
 } // namespace
 
@@ -179,20 +272,38 @@ static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 30;
  *  ensure everything is calculated at compile time)
  */
 template <typename T>
-struct tTypeTraitsVector
+struct TypeTraitsVector
 {
   enum { cHAS_DIFFERENT_UNDERLYING_TYPE = !std::is_same<typename UnderlyingType<T>::type, T>::value };
+  enum { cSERIALIZATION_FUNCTION_OFFSET = sizeof(detail::tTypeInfo) + (SupportsBitwiseCopy<T>::value && IsDefaultConstructionZeroMemory<T>::value ? 0 : sizeof(tBinaryOperations)) + (IsStdVector<T>::value ? sizeof(tBinaryOperationsVector) : 0) };
+  static_assert((cSERIALIZATION_FUNCTION_OFFSET & trait_flags::cSERIALIZATION_FUNCTION_OFFSET_BITS) == cSERIALIZATION_FUNCTION_OFFSET, "Invalid offset");
 
-  // Bit vector for type
-  static const int value =
-    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
+  // Bit vector for type (the remaining flags are set in the code)
+  static const uint32_t value =
+    (IsStdVector<T>::value ? trait_flags::cIS_LIST_TYPE : 0) |
+    cSERIALIZATION_FUNCTION_OFFSET | // offset
+
+    (serialization::IsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
+    (serialization::IsStringSerializable<T>::value ? trait_flags::cIS_STRING_SERIALIZABLE : 0) |
+    (serialization::IsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0) |
+
+    (std::is_enum<T>::value ? trait_flags::cIS_ENUM : 0) |
+    (IsVectorTypeSupported<T>::value ? trait_flags::cHAS_LIST_TYPE : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE ? trait_flags::cHAS_UNDERLYING_TYPE : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<T, typename UnderlyingType<T>::type>::value ? trait_flags::cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::cREVERSE_CAST_VALID ? trait_flags::cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<typename UnderlyingType<T>::type, T>::value ? trait_flags::cIS_CAST_FROM_UNDERLYING_TYPE_IMPLICIT : 0) |
+    (SupportsBitwiseCopy<T>::value ? trait_flags::cSUPPORTS_BITWISE_COPY : 0) |
+
     (std::has_virtual_destructor<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
-    (std::is_abstract<T>::value ? trait_flags::cIS_ABSTRACT : 0) |
+    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
+    (IsDefaultConstructionZeroMemory<T>::value ? trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY : 0)
+
+    /*(std::is_abstract<T>::value ? trait_flags::cIS_ABSTRACT : 0) |
     (std::is_arithmetic<T>::value ? trait_flags::cIS_ARITHMETIC : 0) |
     (std::is_array<T>::value ? trait_flags::cIS_ARRAY : 0) |
     (std::is_class<T>::value ? trait_flags::cIS_CLASS : 0) |
     (std::is_empty<T>::value ? trait_flags::cIS_EMPTY : 0) |
-    (std::is_enum<T>::value ? trait_flags::cIS_ENUM : 0) |
     (std::is_floating_point<T>::value ? trait_flags::cIS_FLOATING_POINT : 0) |
     (std::is_integral<T>::value ? trait_flags::cIS_INTEGRAL : 0) |
     (std::is_object<T>::value ? trait_flags::cIS_OBJECT : 0) |
@@ -201,16 +312,7 @@ struct tTypeTraitsVector
     (std::is_scalar<T>::value ? trait_flags::cIS_SCALAR : 0) |
     (std::is_signed<T>::value ? trait_flags::cIS_SIGNED : 0) |
     (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0) |
-    (cHAS_DIFFERENT_UNDERLYING_TYPE ? trait_flags::cUNDERLYING_TYPE : 0) |
-    (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<T, typename UnderlyingType<T>::type>::value ? trait_flags::cCAST_TO_UNDERLYING_TYPE_IMPLICIT : 0) |
-    (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::reverse_cast_valid ? trait_flags::cREINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID : 0) |
-    (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<typename UnderlyingType<T>::type, T>::value ? trait_flags::cCAST_FROM_UNDERLYING_TYPE_IMPLICIT : 0) |
-    (SupportsBitwiseCopy<T>::value ? trait_flags::cSUPPORTS_BITWISE_COPY : 0)
-#ifdef _LIB_RRLIB_SERIALIZATION_PRESENT_
-    | (serialization::IsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
-    (serialization::IsStringSerializable<T>::value ? trait_flags::cIS_STRING_SERIALIZABLE : 0) |
-    (serialization::IsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0)
-#endif
+    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |*/
     ;
 
   // sanity check of type traits for type T
@@ -251,6 +353,11 @@ struct HasEqualToOperator
 
   enum { value = sizeof(Test(true)) == sizeof(int16_t) };
 };
+template <typename T>
+struct HasEqualToOperator<std::vector<T>>
+{
+  enum { value = HasEqualToOperator<T>::value };
+};
 
 /*!
  * Type trait to get 'normalized' type for type T.
@@ -280,205 +387,6 @@ template <typename T>
 struct IsNormalizedType
 {
   enum { value = std::is_same<T, typename NormalizedType<T>::type>::value };
-};
-
-/*!
- * Type trait that defines the rrlib_rtti name of a type.
- * Template can be specialized for types in order to give them other names
- * (possibly because they are more readable - or to retain backward-compatibility).
- * Notably, a name can also be specified in the tDataType() constructor.
- * This type trait, however, is useful for defining default names for templates.
- */
-template <typename T>
-struct TypeName
-{
-  /*!
-   * \return Type name to use in rrlib_rtti for type T
-   */
-  static std::string Get()
-  {
-    return tType::GetTypeNameFromRtti(typeid(T).name());
-  }
-};
-
-/*!
- * This type trait defines various generic operations for objects of a type T.
- * tGenericObject provides all these operations at runtime
- * (with only runtime type information available)
- *
- * This trait may be specialized in order to use better (e.g. faster, accurate) operations for T.
- */
-template <typename T>
-struct GenericOperations;
-
-/*!
- * Base class with default implementation.
- * Is a base class so that specializations may conveniently reuse parts of it.
- */
-template <typename T, bool IS_CONTAINER = serialization::IsSerializableContainer<T>::value>
-struct GenericOperationsDefault
-{
-  /*!
-   * Create a deep copy of an object.
-   * A deep copy means that the destination object must not
-   * change if the source object is modified or deleted.
-   * Serialization of source and destination objects are equal after calling this.
-   *
-   * \param source Object to be copied
-   * \param destination Object to copy source object to
-   */
-  static void DeepCopy(const T& source, T& destination)
-  {
-    detail::DeepCopyOperation<T>::DeepCopy(source, destination);
-  }
-
-  /*!
-   * Returns whether two objects are equal.
-   * If T supports the '==' operator, this is typically used for the Equals operation.
-   * Serializing equal objects produces identical data.
-   *
-   * \param object1 First object to compare
-   * \param object2 Second object to compare
-   */
-  static bool Equals(const T& object1, const T& object2)
-  {
-    return detail::EqualsOperation<T>::Equals(object1, object2);
-  }
-};
-
-/*!
- * Default implementation for STL containers with elements of type T
- */
-template <typename T, bool MAP, bool CONST_ELEMENTS, bool SIMPLE = std::is_fundamental<T>::value>
-struct GenericOperationsContainer
-{
-  template <typename TContainer>
-  static void DeepCopy(const TContainer& source, TContainer& destination)
-  {
-    serialization::ContainerResize<T>::Resize(destination, source.size());
-    auto dest_it = destination.begin();
-    for (auto src_it = source.begin(); src_it != source.end(); ++src_it, ++dest_it)
-    {
-      GenericOperations<T>::DeepCopy(*src_it, *dest_it);
-    }
-  }
-
-  template <typename TContainer>
-  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
-  {
-    return object1.size() == object2.size() && std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
-  }
-};
-
-template <typename T, bool MAP, bool CONST_ELEMENTS>
-struct GenericOperationsContainer<T, MAP, CONST_ELEMENTS, true>
-{
-  template <typename TContainer>
-  static void DeepCopy(const TContainer& source, TContainer& destination)
-  {
-    destination = source;
-  }
-
-  template <typename TContainer>
-  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
-  {
-    return object1 == object2;
-  }
-};
-
-// Map
-template <typename T, bool CONST_ELEMENTS>
-struct GenericOperationsContainer<T, true, CONST_ELEMENTS, false>
-{
-  template <typename TMap>
-  static void DeepCopy(const TMap& source, TMap& destination)
-  {
-    destination.clear();
-    for (auto it = source.begin(); it != source.end(); ++it)
-    {
-      typedef typename TMap::key_type tKey;
-      typedef typename TMap::mapped_type tMapped;
-      std::pair<tKey, tMapped> entry(it->first, serialization::DefaultInstantiation<tMapped>::Create());
-      GenericOperations<tMapped>::DeepCopy(it->second, entry.second);
-      destination.insert(std::move(entry));
-    }
-  }
-
-  template <typename TContainer>
-  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
-  {
-    return object1.size() == object2.size() && std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
-  }
-};
-
-// e.g. Set
-template <typename T>
-struct GenericOperationsContainer<T, false, true, false>
-{
-  template <typename TMap>
-  static void DeepCopy(const TMap& source, TMap& destination)
-  {
-    destination.clear();
-    for (auto it = source.begin(); it != source.end(); ++it)
-    {
-      T new_element(serialization::DefaultInstantiation<T>::Create());
-      GenericOperations<T>::DeepCopy(*it, new_element);
-      destination.emplace(std::move(new_element));
-    }
-  }
-
-  template <typename TContainer>
-  static bool EqualsImplementation(const TContainer& object1, const TContainer& object2)
-  {
-    return object1.size() == object2.size() && std::equal(object1.begin(), object1.end(), object2.begin(), &GenericOperations<T>::Equals);
-  }
-};
-
-template <typename T>
-struct GenericOperationsDefault<T, true> : GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value, serialization::IsConstElementContainer<T>::value>
-{
-  typedef GenericOperationsContainer<typename T::value_type, serialization::IsSerializableMap<T>::value, serialization::IsConstElementContainer<T>::value> tBase;
-
-  // we need this non-template 'Equals' function to get a function pointer on 'Equals' at other places
-  static inline bool Equals(const T& object1, const T& object2)
-  {
-    return tBase::EqualsImplementation(object1, object2);
-  }
-};
-
-template <typename T>
-struct GenericOperations : GenericOperationsDefault<T>
-{
-};
-
-template <>
-struct GenericOperations<std::string> : GenericOperationsDefault<std::string, false>
-{
-};
-
-/*!
- * This trait defines which other types should be registered (if they have not been already)
- * when a tDataType<T> object is created.
- *
- * Typically, if e.g. tDataType<int> is created, tDataType<std::vector<int>> is also registered
- */
-template < typename T,
-         bool REGISTER_LIST_TYPE = (!serialization::IsSerializableContainer<T>::value) &&
-         (!std::is_base_of<tIsListType<false, false>, T>::value) && (!std::is_base_of<tIsListType<false, true>, T>::value) >
-struct AutoRegisterRelatedTypes
-{
-  static void Register()
-  {
-    tDataType<std::vector<T>>();
-  }
-};
-
-template <typename T>
-struct AutoRegisterRelatedTypes<T, false>
-{
-  static void Register()
-  {
-  }
 };
 
 //----------------------------------------------------------------------

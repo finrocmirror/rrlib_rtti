@@ -39,6 +39,7 @@
 //----------------------------------------------------------------------
 // Internal includes with ""
 //----------------------------------------------------------------------
+#include "rrlib/util/tManagedConstCharPointer.h"
 
 //----------------------------------------------------------------------
 // Namespace declaration
@@ -115,6 +116,22 @@ struct NormalizedIntegerType<8, true>
   typedef unsigned long long type;
 };
 
+/*!
+ * Type trait to determine whether T has a CopyFrom member function
+ */
+template <typename T>
+struct HasCopyFromMethod
+{
+  template <typename U>
+  static U &Make();
+
+  template <typename U = T>
+  static int16_t Test(decltype(Make<U>().CopyFrom(Make<const U>()))*);
+
+  static int32_t Test(...);
+
+  enum { value = sizeof(Test(static_cast<void*>(nullptr))) == sizeof(int16_t) }; // g++ 4.8 requires this cast somehow
+};
 
 //----------------------------------------------------------------------
 // End of namespace declaration

@@ -19,15 +19,15 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 //----------------------------------------------------------------------
-/*!\file    rrlib/rtti/tGenericObject.cpp
+/*!\file    rrlib/rtti/tTypedPointer.cpp
  *
  * \author  Max Reichardt
  *
- * \date    2013-05-18
+ * \date    2016-07-26
  *
  */
 //----------------------------------------------------------------------
-#include "rrlib/rtti/tGenericObject.h"
+#include "rrlib/rtti/tTypedPointer.h"
 
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
@@ -66,13 +66,47 @@ namespace rtti
 // Implementation
 //----------------------------------------------------------------------
 
-void tGenericObject::Deserialize(serialization::tInputStream& stream, serialization::tDataEncoding enc)
+void tTypedPointer::Deserialize(serialization::tStringInputStream& stream) const
 {
-  if (enc == serialization::tDataEncoding::BINARY)
+  if (data && (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE))
+  {
+    (*type.GetStringSerialization().deserialize)(stream, *this);
+  }
+  else
+  {
+    throw std::runtime_error("Deserialization not supported");
+  }
+}
+
+void tTypedPointer::Deserialize(const xml::tNode& node) const
+{
+  if (data && (type.GetTypeTraits() & trait_flags::cIS_XML_SERIALIZABLE))
+  {
+#ifdef _LIB_RRLIB_XML_PRESENT_
+    if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
+    {
+      serialization::tStringInputStream stream(node.GetTextContent());
+      Deserialize(stream);
+    }
+    else
+    {
+      (*type.GetXMLSerialization().deserialize)(node, *this);
+    }
+#endif
+  }
+  else
+  {
+    throw std::runtime_error("Deserialization not supported");
+  }
+}
+
+void tTypedPointer::Deserialize(serialization::tInputStream& stream, serialization::tDataEncoding encoding) const
+{
+  if (encoding == serialization::tDataEncoding::BINARY)
   {
     Deserialize(stream);
   }
-  else if (enc == serialization::tDataEncoding::STRING)
+  else if (encoding == serialization::tDataEncoding::STRING)
   {
     serialization::tStringInputStream sis(stream.ReadString());
     Deserialize(sis);
@@ -90,13 +124,48 @@ void tGenericObject::Deserialize(serialization::tInputStream& stream, serializat
   }
 }
 
-void tGenericObject::Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding enc) const
+void tTypedConstPointer::Serialize(serialization::tStringOutputStream& stream) const
 {
-  if (enc == serialization::tDataEncoding::BINARY)
+  if (data && (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE))
+  {
+    (*type.GetStringSerialization().serialize)(stream, *this);
+  }
+  else
+  {
+    throw std::runtime_error("Serialization not supported");
+  }
+}
+
+void tTypedConstPointer::Serialize(xml::tNode& node) const
+{
+  if (data && (type.GetTypeTraits() & trait_flags::cIS_XML_SERIALIZABLE))
+  {
+#ifdef _LIB_RRLIB_XML_PRESENT_
+    if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
+    {
+      serialization::tStringOutputStream stream;
+      Serialize(stream);
+      node.SetContent(stream.ToString());
+    }
+    else
+    {
+      (*type.GetXMLSerialization().serialize)(node, *this);
+    }
+#endif
+  }
+  else
+  {
+    throw std::runtime_error("Serialization not supported");
+  }
+}
+
+void tTypedConstPointer::Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding encoding) const
+{
+  if (encoding == serialization::tDataEncoding::BINARY)
   {
     Serialize(stream);
   }
-  else if (enc == serialization::tDataEncoding::STRING)
+  else if (encoding == serialization::tDataEncoding::STRING)
   {
     serialization::tStringOutputStream sos;
     Serialize(sos);
@@ -114,6 +183,7 @@ void tGenericObject::Serialize(serialization::tOutputStream& stream, serializati
 #endif
   }
 }
+
 
 //----------------------------------------------------------------------
 // End of namespace declaration

@@ -2,7 +2,7 @@
 // You received this file as part of RRLib
 // Robotics Research Library
 //
-// Copyright (C) AG Robotersysteme TU Kaiserslautern
+// Copyright (C) Finroc GbR (finroc.org)
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,22 +19,14 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 //----------------------------------------------------------------------
-/*!\file    rrlib/rtti/detail/tGenericObjectInstanceEmplaced.h
+/*!\file    rrlib/rtti/tType2.hpp
  *
  * \author  Max Reichardt
  *
- * \date    2014-06-23
- *
- * \brief   Contains tGenericObjectInstanceEmplaced
- *
- * \b tGenericObjectInstanceEmplaced
- *
- * A generic object that receives memory to initialize an object T in - and wrap it
+ * \date    2016-08-14
  *
  */
 //----------------------------------------------------------------------
-#ifndef __rrlib__rtti__detail__tGenericObjectInstanceEmplaced_h__
-#define __rrlib__rtti__detail__tGenericObjectInstanceEmplaced_h__
 
 //----------------------------------------------------------------------
 // External includes (system with <>, local with "")
@@ -45,13 +37,16 @@
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
+// Debugging
+//----------------------------------------------------------------------
+#include <cassert>
+
+//----------------------------------------------------------------------
 // Namespace declaration
 //----------------------------------------------------------------------
 namespace rrlib
 {
 namespace rtti
-{
-namespace detail
 {
 
 //----------------------------------------------------------------------
@@ -59,56 +54,46 @@ namespace detail
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// Class declaration
+// Const values
 //----------------------------------------------------------------------
-//! Generic object using specified memory address
-/*!
- * A generic object that receives memory to initialize an object T in - and wrap it.
- * Memory block needs to have size sizeof(T)
- */
-template<typename T, bool NO_ARG_CONSTRUCTOR = std::is_base_of<serialization::DefaultImplementation, serialization::DefaultInstantiation<T>>::value>
-class tGenericObjectInstanceEmplaced : public detail::tGenericObjectBaseImpl<T>
+
+//----------------------------------------------------------------------
+// Implementation
+//----------------------------------------------------------------------
+
+
+struct tGenericObjectDestructorCall
 {
-
-//----------------------------------------------------------------------
-// Public methods and typedefs
-//----------------------------------------------------------------------
-public:
-
-  tGenericObjectInstanceEmplaced(void* address) :
-    detail::tGenericObjectBaseImpl<T>()
+  void operator()(tGenericObject* object) const
   {
-    new(address) T(serialization::DefaultInstantiation<T>::Create());
-    tGenericObject::wrapped = address;
+    object->~tGenericObject();
   }
-
 };
 
-// Specialization for when default constructor is available
-template<typename T>
-class tGenericObjectInstanceEmplaced<T, true> : public detail::tGenericObjectBaseImpl<T>
+tGenericObject* tType::CreateInstanceGeneric() const
 {
+  void* placement = operator new(GetSize(true));
+  char* object_address = static_cast<char*>(placement) + sizeof(tGenericObject);
+  tGenericObject* generic_object = new(placement) tGenericObject(object_address, *this);
+  EmplaceInstance(object_address);
+  return generic_object;
+}
 
-//----------------------------------------------------------------------
-// Public methods and typedefs
-//----------------------------------------------------------------------
-public:
+inline std::unique_ptr<tGenericObject, tGenericObjectDestructorCall> tType::EmplaceInstanceGeneric(void* placement) const
+{
+  char* object_address = static_cast<char*>(placement) + sizeof(tGenericObject);
+  tGenericObject* generic_object = new(placement) tGenericObject(object_address, *this);
+  EmplaceInstance(object_address);
+  return std::unique_ptr<tGenericObject, tGenericObjectDestructorCall>(generic_object);
+}
 
-  tGenericObjectInstanceEmplaced(void* address) :
-    detail::tGenericObjectBaseImpl<T>()
-  {
-    new(address) T();
-    tGenericObject::wrapped = address;
-  }
-
-};
+inline size_t tType::GetSize(bool as_generic_object) const
+{
+  return info->size + (as_generic_object ? sizeof(tGenericObject) : 0);
+}
 
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
 }
 }
-}
-
-
-#endif

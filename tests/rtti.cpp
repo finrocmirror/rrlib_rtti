@@ -68,7 +68,7 @@ namespace test
 // Const values
 //----------------------------------------------------------------------
 static_assert(detail::HasCopyFromMethod<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
-
+static_assert(IsVectorTypeSupported<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
@@ -78,6 +78,7 @@ class Class2 {};
 class RenamedClass {};
 class TypeTraitRenamedClass {};
 class ClassInitializedInThread {};
+static_assert(!HasEqualToOperator<Class1>::value, "Trait not implemented correctly");
 
 template <typename T>
 class TemplateClass {};
@@ -87,10 +88,7 @@ class TemplateClass {};
 template<>
 struct TypeName<test::TypeTraitRenamedClass>
 {
-  static std::string Get()
-  {
-    return "Custom Name";
-  }
+  static constexpr const char* value = "Custom Name";
 };
 
 namespace test
@@ -100,7 +98,6 @@ class tTestTraitsRtti : public util::tUnitTestSuite
 {
   RRLIB_UNIT_TESTS_BEGIN_SUITE(tTestTraitsRtti);
   RRLIB_UNIT_TESTS_ADD_TEST(TestTypeNaming);
-  RRLIB_UNIT_TESTS_ADD_TEST(TestGetBinary);
   RRLIB_UNIT_TESTS_ADD_TEST(TestGenericOperations);
   RRLIB_UNIT_TESTS_ADD_TEST(TestDataTypeInstantiation);
   RRLIB_UNIT_TESTS_END_SUITE;
@@ -145,35 +142,12 @@ private:
     RRLIB_UNIT_TESTS_EQUALITY(std::string("String"), tDataType<std::string>().GetName());
   }
 
-  void TestGetBinary()
-  {
-#if RRLIB_RTTI_BINARY_DETECTION_ENABLED
-    // Test GetBinary() function in different cases
-    // (TODO: another case would be static initialization after dlopen() call, which should return a non-empty string;
-    //  this is difficult to realize, as there is currently no way to specify dependency to non-linked lib in make_builder)
-
-    // Case 1: Static initialization before main()
-    RRLIB_UNIT_TESTS_ASSERT_MESSAGE("GetBinary() failed on this plattform (we had this due to some erroneous stack traces on Odroid plattforms). You might want to define RRLIB_RTTI_BINARY_DETECTION_ENABLED=0 in order to disable this optional feature. It is currently only used to determine any missing .so files to auto-load on startup when graphically creating ports with finstruct.",
-                                    rrlib::util::StartsWith(tDataType<std::string>().GetBinary(false), "librrlib_rtti.so"));
-
-    // Case 2: Initialization below main()
-    RRLIB_UNIT_TESTS_EQUALITY(std::string(""), tDataType<Class1>().GetBinary(false));
-
-    // Case 3: Initialization in separate thread
-    std::thread test_thread([]()
-    {
-      RRLIB_UNIT_TESTS_EQUALITY(std::string(""), tDataType<ClassInitializedInThread>().GetBinary(false));
-    });
-    test_thread.join();
-#endif
-  }
-
   template <typename T>
   void TestGenericOperations(T& t)
   {
     static_assert(rrlib::serialization::IsBinarySerializable<T>::value, "Trait not correctly implemented");
     tGenericObjectWrapper<T> wrapper(t);
-    tGenericObject* copy = wrapper.GetType().CreateInstanceGeneric();
+    std::unique_ptr<tGenericObject> copy(wrapper.GetType().CreateInstanceGeneric());
     RRLIB_UNIT_TESTS_EQUALITY_MESSAGE(std::string("Objects must not be equal (type: ") + util::Demangle(typeid(T).name()) + ")", copy->Equals(wrapper), false);
     copy->DeepCopyFrom(wrapper);
     RRLIB_UNIT_TESTS_EQUALITY_MESSAGE(std::string("Objects must be equal (type: ") + util::Demangle(typeid(T).name()) + ")", copy->Equals(wrapper), true);
@@ -190,10 +164,6 @@ private:
     TestGenericOperations(test_vector);
     std::vector<bool> test_vector_bool = { false, true, true };
     TestGenericOperations(test_vector_bool);
-    std::vector<std::vector<double>> test_double_vector = { { 3, 4 }, { 2 } };
-    TestGenericOperations(test_double_vector);
-    std::set<std::string> test_string_set = { "String 1", "String 2" };
-    TestGenericOperations(test_string_set);
 
     tBuffer buffer;
     serialization::tOutputStream stream(buffer);
@@ -203,10 +173,6 @@ private:
     }
     stream.Close();
     TestGenericOperations(buffer);
-    std::map<size_t, tBuffer> m;
-    m[1] = std::move(buffer);
-    m[3] = tBuffer();
-    TestGenericOperations(m);
   }
 
   void TestDataTypeInstantiation()
