@@ -41,6 +41,7 @@
 //----------------------------------------------------------------------
 #include <vector>
 #include <string>
+#include "rrlib/serialization/tRegister.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -82,7 +83,7 @@ typedef util::tManagedConstCharPointer(*tGetTypenameFunction)(const tType& type)
  */
 struct tTypeInfo
 {
-  /*! Memory allocated for annotations in each type (2 byte are used by Finroc in standard configuration) */
+  /*! Memory allocated for annotations in each type */
   enum { cMAX_ANNOTATION_SIZE = 3 * sizeof(void*) };
 
   /*!
@@ -91,6 +92,9 @@ struct tTypeInfo
   class tSharedInfo
   {
   public:
+
+    /*! Data type of type register */
+    typedef serialization::tRegister<tType, 32, 128> tRegisteredTypes;
 
     /*!
      * \param type_info Type info of plain type
@@ -121,7 +125,7 @@ struct tTypeInfo
   protected:
 
     /*!
-     * Registers type (type is assigned uids in this step and added to list of available types)
+     * Registers type (type is assigned handle in this step and added to list of available types)
      *
      * \param type_info Type info of type to register
      * \param type_info Type info of list type to register
@@ -144,7 +148,7 @@ struct tTypeInfo
 
 
     /*! Name of plain data type */
-    util::tManagedConstCharPointer name;
+    const char* name;
 
     /*! Contains pointer to underlying type (see UnderlyingType type trait) */
     const tTypeInfo* underlying_type;
@@ -152,11 +156,11 @@ struct tTypeInfo
     /*! Annotations to data type */
     char annotations[cMAX_ANNOTATION_SIZE];
 
-    /*! Data type uid (index 1 is list type; -1 if there is no list type) */
-    uint16_t uid[2];
+    /*! Data type handle (index 1 is list type; -1 if there is no list type) */
+    uint16_t handle[2];
 
-    /*! List of registered types (is never reallocated, so concurrent read access is safe) */
-    static const std::vector<const tTypeInfo*>* registered_types;
+    /*! Register of registered types */
+    static const tRegisteredTypes* registered_types;
 
 
     tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now);
@@ -208,7 +212,7 @@ struct tTypeInfo
      * \param name Name of plain type
      * \param enum_strings Enum String for this type
      */
-    tSharedInfoEnum(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, make_builder::internal::tEnumStrings& enum_strings);
+    tSharedInfoEnum(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings);
 
     /*! pointer to enum string constants data - if this is an enum type */
     const make_builder::internal::tEnumStrings& enum_strings;
@@ -221,14 +225,15 @@ struct tTypeInfo
   const std::type_info& std_type_info;
 
   /*! Bit vector of type traits determined at compile time (see TypeTraitsVector) + from constructor */
-  size_t type_traits;
+  uint32_t type_traits;
 
   /* Pointer to shared type info (initialized at runtime) */
   tSharedInfo* shared_info;
 
   /*! sizeof(T) - required by some generic functions */
-  size_t size;
+  uint32_t size;
 
+  enum { cLIST_TRAIT_FLAGS = 1 | (1 << 12) };   // the complete set of flags is declared in type_traits.h
 
   /*!
    * Lookup data type by name.
@@ -260,12 +265,28 @@ struct tTypeInfo
   static util::tManagedConstCharPointer GetDefaultTypeName(const tType& type);
 
   /*!
+   * \return Handle of data type
+   */
+  inline uint16_t GetHandle() const
+  {
+    return shared_info->handle[IsListType() ? 1 : 0];
+  }
+
+  /*!
    * For the types registered in rrlib::rtti, returns the assigned name
    *
    * \param type Type info (including mangled type name from typeid(...).name())
    * \return Name that rrlib_rtti assigns to this type
    */
   static util::tManagedConstCharPointer GetTypeNameDefinedInRRLibRtti(const tType& type);
+
+  /*!
+   * \return Is this a list type? (std::vector<T> of some type T)
+   */
+  inline bool IsListType() const
+  {
+    return (type_traits & cLIST_TRAIT_FLAGS) == cLIST_TRAIT_FLAGS;
+  }
 };
 
 template <typename T>

@@ -291,6 +291,14 @@ public:
     reinterpret_cast<const tTypedConstPointer&>(*this).Serialize(stream, encoding);
   }
 
+  /*!
+   * \return String representation of object this points to. This is the serialized value for string serializable types. Otherwise it is type name + pointer.
+   */
+  std::string ToString() const
+  {
+    return reinterpret_cast<const tTypedConstPointer&>(*this).ToString();
+  }
+
 //----------------------------------------------------------------------
 // Protected fields and constructors
 //----------------------------------------------------------------------

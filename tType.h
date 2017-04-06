@@ -145,7 +145,15 @@ public:
    *
    * \return Instance of data type wrapped as tGenericObject (caller is responsible for deleting)
    */
-  inline tGenericObject* CreateInstanceGeneric() const;
+  inline tGenericObject* CreateGenericObject() const;
+
+  /*!
+   * Creates object of this data type wrapped as tGenericObject
+   *
+   * \param wrapped_data_placement Places wrapped data of this type (without tGenericObject object) at this memory address (needs to have at least size GetSize(false))
+   * \return Instance of data type wrapped as tGenericObject (caller is responsible for deleting)
+   */
+  inline tGenericObject* CreateGenericObject(void* wrapped_data_placement) const;
 
   /*!
    * Destruct object instance at specified memory address.
@@ -186,7 +194,7 @@ public:
    * \param placement Destination for placement new (needs to have at least size GetSize(true))
    * \return Instance of data type wrapped as tGenericObject. Smart Pointer ensures that destructor on emplaced instance is called (-> smart pointer must not be destructed as long as object is in use)
    */
-  inline std::unique_ptr<tGenericObject, tGenericObjectDestructorCall> EmplaceInstanceGeneric(void* placement) const;
+  inline std::unique_ptr<tGenericObject, tGenericObjectDestructorCall> EmplaceGenericObject(void* placement) const;
 
   /*!
    * Lookup data type by name.
@@ -237,7 +245,7 @@ public:
    */
   inline tType GetElementType() const
   {
-    return IsListType() ? GetType(GetSharedInfo().uid[0]) : tType();
+    return IsListType() ? GetType(GetSharedInfo().handle[0]) : tType();
   }
 
   /*!
@@ -249,11 +257,19 @@ public:
   }
 
   /*!
+   * \return Handle of data type
+   */
+  inline uint16_t GetHandle() const
+  {
+    return GetSharedInfo().handle[info->IsListType() ? 1 : 0];
+  }
+
+  /*!
    * \return If this is a plain type and a list type has been initialized: list type (std::vector<T>) - otherwise NULL
    */
   inline tType GetListType() const
   {
-    return (info->type_traits & (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE)) == (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE) ? GetType(GetSharedInfo().uid[1]) : tType();
+    return (info->type_traits & (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE)) == (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE) ? GetType(GetSharedInfo().handle[1]) : tType();
   }
 
   /*!
@@ -265,15 +281,36 @@ public:
   {
     if (IsListType())
     {
-      size_t length = strlen(GetSharedInfo().name.Get());
+      size_t length = strlen(GetSharedInfo().name);
       char buffer[length + 10];
       memcpy(buffer, "List<", 5);
-      memcpy(buffer + 5, GetSharedInfo().name.Get(), length);
+      memcpy(buffer + 5, GetSharedInfo().name, length);
       buffer[5 + length] = '>';
       buffer[6 + length] = 0;
       return buffer;
     }
-    return GetSharedInfo().name.Get();
+    return GetSharedInfo().name;
+  }
+
+  /*!
+   * Efficient variant of GetName()
+   *
+   * \param buffer Buffer that name is written to. Should have size >= strlen(GetPlainTypeName() + 7)
+   */
+  void GetName(char* buffer) const
+  {
+    size_t length = strlen(GetSharedInfo().name);
+    if (IsListType())
+    {
+      memcpy(buffer, "List<", 5);
+      memcpy(buffer + 5, GetSharedInfo().name, length);
+      buffer[5 + length] = '>';
+      buffer[6 + length] = 0;
+    }
+    else
+    {
+      memcpy(buffer, GetSharedInfo().name, length + 1);
+    }
   }
 
   /*!
@@ -281,7 +318,7 @@ public:
    */
   const char* GetPlainTypeName() const
   {
-    return GetSharedInfo().name.Get();
+    return GetSharedInfo().name;
   }
 
   /*!
@@ -299,12 +336,12 @@ public:
   inline size_t GetSize(bool as_generic_object = false) const;
 
   /*!
-   * \param uid Data type uid
-   * \return Data type with specified uid (== nullptr if there's no type with this uid)
+   * \param handle Data type handle
+   * \return Data type with specified handle (== nullptr if there's no type with this handle)
    */
-  static tType GetType(size_t uid)
+  static tType GetType(size_t handle)
   {
-    return (uid < detail::tTypeInfo::tSharedInfo::registered_types->size()) ? (*detail::tTypeInfo::tSharedInfo::registered_types)[uid] : tType();
+    return (handle < detail::tTypeInfo::tSharedInfo::registered_types->Size()) ? tType((*detail::tTypeInfo::tSharedInfo::registered_types)[handle]) : tType();
   }
 
   /*!
@@ -312,7 +349,15 @@ public:
    */
   static size_t GetTypeCount()
   {
-    return detail::tTypeInfo::tSharedInfo::registered_types->size();
+    return detail::tTypeInfo::tSharedInfo::registered_types->Size();
+  }
+
+  /*!
+   * \return Global register with registered types
+   */
+  static const detail::tTypeInfo::tSharedInfo::tRegisteredTypes& GetTypeRegister()
+  {
+    return (*detail::tTypeInfo::tSharedInfo::registered_types);
   }
 
   /*!
@@ -321,14 +366,6 @@ public:
   inline uint32_t GetTypeTraits() const
   {
     return info->type_traits;
-  }
-
-  /*!
-   * \return uid of data type
-   */
-  inline uint16_t GetUid() const
-  {
-    return GetSharedInfo().uid[IsListType() ? 1 : 0];
   }
 
   /*!
@@ -345,7 +382,7 @@ public:
    */
   inline bool IsListType() const
   {
-    return (info->type_traits & (trait_flags::cIS_LIST_TYPE | trait_flags::cIS_DATA_TYPE)) == (trait_flags::cIS_LIST_TYPE | trait_flags::cIS_DATA_TYPE);
+    return info->IsListType();
   }
 
   /*!
@@ -366,22 +403,30 @@ public:
   }
 
   /*!
+   * \return Reference to shared type info object
+   */
+  const detail::tTypeInfo::tSharedInfo& SharedTypeInfo() const
+  {
+    return *info->shared_info;
+  }
+
+  /*!
    * for checks against nullptr (if (type == nullptr) {...} )
    */
-  bool operator== (std::nullptr_t* ptr) const
+  /*bool operator== (std::nullptr_t* ptr) const
   {
     return info == &detail::tTypeInfo::cNULL_TYPE_INFO;
-  }
+  }*/
 
   bool operator== (const tType& other) const
   {
     return info == other.info;
   }
 
-  bool operator!= (std::nullptr_t* ptr) const
+  /*bool operator!= (std::nullptr_t* ptr) const
   {
     return info != &detail::tTypeInfo::cNULL_TYPE_INFO;
-  }
+  }*/
 
   bool operator!= (const tType& other) const
   {
@@ -393,6 +438,14 @@ public:
     return info < other.info;
   }
 
+  /*!
+   * \return True if type is not null-type
+   */
+  operator bool() const
+  {
+    return info != &detail::tTypeInfo::cNULL_TYPE_INFO;
+  }
+
 //----------------------------------------------------------------------
 // Protected information class
 //----------------------------------------------------------------------
@@ -402,7 +455,7 @@ protected:
   friend class tTypedPointer;
   friend struct detail::tTypeInfo;
 
-  constexpr tType(const detail::tTypeInfo* info) : info(info)
+  explicit constexpr tType(const detail::tTypeInfo* info) : info(info)
   {}
 
   /*!
@@ -464,8 +517,8 @@ private:
   const detail::tTypeInfo* info;
 };
 
-serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& dt);
-serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& dt);
+serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& type);
+serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& type);
 serialization::tStringOutputStream& operator << (serialization::tStringOutputStream& stream, const tType& dt);
 serialization::tStringInputStream& operator >> (serialization::tStringInputStream& stream, tType& dt);
 

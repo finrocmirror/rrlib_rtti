@@ -147,7 +147,7 @@ private:
   {
     static_assert(rrlib::serialization::IsBinarySerializable<T>::value, "Trait not correctly implemented");
     tGenericObjectWrapper<T> wrapper(t);
-    std::unique_ptr<tGenericObject> copy(wrapper.GetType().CreateInstanceGeneric());
+    std::unique_ptr<tGenericObject> copy(wrapper.GetType().CreateGenericObject());
     RRLIB_UNIT_TESTS_EQUALITY_MESSAGE(std::string("Objects must not be equal (type: ") + util::Demangle(typeid(T).name()) + ")", copy->Equals(wrapper), false);
     copy->DeepCopyFrom(wrapper);
     RRLIB_UNIT_TESTS_EQUALITY_MESSAGE(std::string("Objects must be equal (type: ") + util::Demangle(typeid(T).name()) + ")", copy->Equals(wrapper), true);

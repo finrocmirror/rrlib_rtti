@@ -88,7 +88,7 @@ public:
     assert((pointer == nullptr || (type.GetTypeTraits() & trait_flags::cIS_DATA_TYPE)) && "Only data types are valid");
   }
   template <typename T>
-  tTypedConstPointer(const T* object) : data(object), type(tDataType<T>())
+  explicit tTypedConstPointer(const T* object) : data(object), type(tDataType<T>())
   {}
 
   inline operator bool() const
@@ -242,6 +242,11 @@ public:
    */
   void Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding encoding) const;
 
+  /*!
+   * \return String representation of object this points to. This is the serialized value for string serializable types. Otherwise it is type name + pointer (or "nullptr").
+   */
+  std::string ToString() const;
+
 //----------------------------------------------------------------------
 // Private methods and fields
 //----------------------------------------------------------------------
@@ -269,7 +274,7 @@ public:
     assert((pointer == nullptr || (type.GetTypeTraits() & trait_flags::cIS_DATA_TYPE)) && "Only data types are valid");
   }
   template <typename T>
-  tTypedPointer(T* object) : data(object), type(tDataType<T>())
+  explicit tTypedPointer(T* object) : data(object), type(tDataType<T>())
   {}
 
   inline operator const tTypedConstPointer&() const
@@ -491,6 +496,14 @@ public:
   void Serialize(serialization::tOutputStream& stream, serialization::tDataEncoding encoding) const
   {
     reinterpret_cast<const tTypedConstPointer&>(*this).Serialize(stream, encoding);
+  }
+
+  /*!
+   * \return String representation of object this points to. This is the serialized value for string serializable types. Otherwise it is type name + pointer (or "nullptr").
+   */
+  std::string ToString() const
+  {
+    return reinterpret_cast<const tTypedConstPointer&>(*this).ToString();
   }
 
 //----------------------------------------------------------------------

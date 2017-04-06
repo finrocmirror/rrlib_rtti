@@ -70,7 +70,7 @@ struct tGenericObjectDestructorCall
   }
 };
 
-tGenericObject* tType::CreateInstanceGeneric() const
+tGenericObject* tType::CreateGenericObject() const
 {
   void* placement = operator new(GetSize(true));
   char* object_address = static_cast<char*>(placement) + sizeof(tGenericObject);
@@ -79,7 +79,15 @@ tGenericObject* tType::CreateInstanceGeneric() const
   return generic_object;
 }
 
-inline std::unique_ptr<tGenericObject, tGenericObjectDestructorCall> tType::EmplaceInstanceGeneric(void* placement) const
+tGenericObject* tType::CreateGenericObject(void* wrapped_data_placement) const
+{
+  char* object_address = static_cast<char*>(wrapped_data_placement);
+  tGenericObject* generic_object = new tGenericObject(object_address, *this);
+  EmplaceInstance(object_address);
+  return generic_object;
+}
+
+inline std::unique_ptr<tGenericObject, tGenericObjectDestructorCall> tType::EmplaceGenericObject(void* placement) const
 {
   char* object_address = static_cast<char*>(placement) + sizeof(tGenericObject);
   tGenericObject* generic_object = new(placement) tGenericObject(object_address, *this);

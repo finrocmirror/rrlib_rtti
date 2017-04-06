@@ -66,45 +66,27 @@ namespace rtti
 // Implementation
 //----------------------------------------------------------------------
 
-serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& dt)
+serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& type)
 {
-  serialization::tTypeEncoding encoding = stream.GetTypeEncoding();
-  if (encoding == serialization::tTypeEncoding::LOCAL_UIDS)
+  if (tType::GetTypeRegister().WriteEntry(stream, type.GetHandle()))
   {
-    stream.WriteShort(dt.GetUid());
-  }
-  else if (encoding == serialization::tTypeEncoding::NAMES)
-  {
-    if (dt.IsListType())
+    if (type.IsListType())
     {
-      stream << "List<" << dt.GetPlainTypeName() << '>';
+      stream << "List<" << type.GetPlainTypeName() << '>';
     }
     else
     {
-      stream << dt.GetPlainTypeName();
+      stream << type.GetPlainTypeName();
     }
-  }
-  else
-  {
-    stream.GetCustomTypeEncoder()->WriteType(stream, dt);
   }
   return stream;
 }
 
-serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& dt)
+serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& type)
 {
-  serialization::tTypeEncoding encoding = stream.GetTypeEncoding();
-  if (encoding == serialization::tTypeEncoding::LOCAL_UIDS)
+  if (tType::GetTypeRegister().ReadEntry(stream, type))
   {
-    dt = tType::GetType(stream.ReadShort());
-  }
-  else if (encoding == serialization::tTypeEncoding::NAMES)
-  {
-    dt = tType::FindType(stream.ReadString());
-  }
-  else
-  {
-    dt = stream.GetCustomTypeEncoder()->ReadType(stream);
+    type = tType::FindType(stream.ReadString());
   }
   return stream;
 }

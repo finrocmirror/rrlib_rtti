@@ -184,6 +184,23 @@ void tTypedConstPointer::Serialize(serialization::tOutputStream& stream, seriali
   }
 }
 
+std::string tTypedConstPointer::ToString() const
+{
+  if (!data)
+  {
+    return "<nullptr>";
+  }
+  if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
+  {
+    rrlib::serialization::tStringOutputStream stream;
+    this->Serialize(stream);
+    return stream.ToString();
+  }
+  std::ostringstream stream;
+  stream << type.GetName() << " (at " << std::hex << data << ")";
+  return stream.str();
+}
+
 
 //----------------------------------------------------------------------
 // End of namespace declaration

@@ -68,9 +68,6 @@ namespace detail
 // Const values
 //----------------------------------------------------------------------
 
-/*! we need to avoid reallocation in order to make vector thread safe. Therefore it is created with this capacity. */
-const size_t cMAX_TYPES = 1000;
-
 static tTypeInfo::tSharedInfo cNULL_TYPE_SHARED_INFO(nullptr);
 const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY, &cNULL_TYPE_SHARED_INFO, 0 };
 
@@ -80,19 +77,21 @@ const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_fla
 
 struct tInternalData
 {
+  tTypeInfo::tSharedInfo::tRegisteredTypes types;
+
   std::recursive_mutex mutex;
-  std::vector<const tTypeInfo*> types;
   size_t next_annotation_index;
-  typedef std::pair<util::tManagedConstCharPointer, util::tManagedConstCharPointer> tRenamingEntry;
+  typedef std::pair<util::tManagedConstCharPointer, const char*> tRenamingEntry;  // first: original demangled type name; second: actual type name
   std::vector<tRenamingEntry> renamed_types;
   typedef std::pair<const char*, unsigned int> tAnnotationTableEntry; // typeid(TAnnotation).name(), offset
   std::vector<tAnnotationTableEntry> annotation_table;
   typedef std::pair<const char*, const tTypeInfo*> tNameLookupEntry; // name, type info
   std::vector<tNameLookupEntry> name_lookup;
+  std::vector<util::tManagedConstCharPointer> copied_strings;
 
-  tInternalData() : mutex(), types(), next_annotation_index(0)
+  tInternalData() : types(), mutex(), next_annotation_index(0)
   {
-    types.reserve(cMAX_TYPES); // we need to avoid reallocation in order to make vector thread safe
+    types.Add(tType());
   }
 };
 
@@ -119,7 +118,7 @@ static tInternalData& GetInternalData()
   return internal_data;
 }
 
-const std::vector<const tTypeInfo*>* tTypeInfo::tSharedInfo::registered_types = &GetInternalData().types;
+const tTypeInfo::tSharedInfo::tRegisteredTypes* tTypeInfo::tSharedInfo::registered_types = &GetInternalData().types;
 
 /*!
  * Replaces std container names in string that is provided
@@ -199,11 +198,11 @@ const tType tTypeInfo::FindType(const std::string& name)
 
   // main names
   static tInternalData& internal_data = GetInternalData();
-  for (const tTypeInfo * info : internal_data.types)
+  for (const tType & type : internal_data.types)
   {
-    if (name == info->shared_info->name.Get())
+    if ((!type.IsListType()) && name == type.info->shared_info->name)
     {
-      return tType(info);
+      return type;
     }
   }
 
@@ -222,22 +221,22 @@ const tType tTypeInfo::FindType(const std::string& name)
   if (name.find('.') != std::string::npos) // namespaces in specified name
   {
     tType type = FindType(tSharedInfo::RemoveNamespaces(name));
-    if (type != nullptr)
+    if (type)
     {
       return type;
     }
   }
   else // no namespace in specified name
   {
-    for (const tTypeInfo * info : internal_data.types)
+    for (const tType & type : internal_data.types)
     {
       char buffer[name.length() + 2];
       buffer[0] = '.';
       memcpy(&buffer[1], name.c_str(), name.length());
       buffer[name.length() + 1] = 0;
-      if (rrlib::util::EndsWith(info->shared_info->name.Get(), buffer))
+      if ((!type.IsListType()) && rrlib::util::EndsWith(type.info->shared_info->name, buffer))
       {
-        return tType(info);
+        return type;
       }
     }
   }
@@ -248,11 +247,11 @@ const tType tTypeInfo::FindType(const std::string& name)
 const tType tTypeInfo::FindTypeByRtti(const char* rtti_name)
 {
   static tInternalData& internal_data = GetInternalData();
-  for (const tTypeInfo * info : internal_data.types)
+  for (const tType & type : internal_data.types)
   {
-    if (info->std_type_info.name() == rtti_name)
+    if (type.info->std_type_info.name() == rtti_name)
     {
-      return tType(info);
+      return type;
     }
   }
   return tType();
@@ -271,9 +270,6 @@ util::tManagedConstCharPointer tTypeInfo::GetTypeNameDefinedInRRLibRtti(const tT
     typeid(unsigned int).name(), "uint32",
     typeid(unsigned long long).name(), "uint64",
     typeid(std::string).name(), "String",
-    typeid(double).name(), "double",
-    typeid(float).name(), "float",
-    typeid(bool).name(), "bool",
     typeid(rrlib::time::tDuration).name(), "Duration",
     typeid(rrlib::time::tTimestamp).name(), "Timestamp"
   };
@@ -292,12 +288,22 @@ util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
 {
   std::string demangled = util::Demangle(type.GetRttiName());
 
+  static tInternalData& internal_data = GetInternalData();
+  std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
+
+  // Has type already been renamed? (before tSharedInfo was constructed)
+  for (auto & entry : internal_data.renamed_types)
+  {
+    if (entry.first.Get() == demangled)
+    {
+      return util::tManagedConstCharPointer(entry.second, false);
+    }
+  }
+
   // Do we have a template? => check for string replacements
   if (demangled.find('<') != std::string::npos)
   {
     ReplaceContainerNames(demangled);
-    static tInternalData& internal_data = GetInternalData();
-    std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
 
     // TODO: std::regex might be more convenient (available on all relevant platforms?)
     for (auto & entry : internal_data.renamed_types)
@@ -311,7 +317,7 @@ util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
         if ((!isalnum(demangled[found_index - 1])) && found_index + demangled_len < demangled.length() &&
             (!isalnum(demangled[found_index + demangled_len])))
         {
-          demangled.replace(found_index, demangled_len, entry.second.Get());
+          demangled.replace(found_index, demangled_len, entry.second);
           found_index = 0;
         }
       }
@@ -368,12 +374,12 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
 {}
 
 tTypeInfo::tSharedInfo::tSharedInfo(std::nullptr_t) :
-  name("NULL", false),
+  name("NULL"),
   underlying_type(&cNULL_TYPE_INFO)
 {
   memset(annotations, 0, sizeof(annotations));
-  uid[0] = -1;
-  uid[1] = -1;
+  handle[0] = 0;
+  handle[1] = 0;
 }
 
 tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now) :
@@ -381,31 +387,48 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
   underlying_type(underlying_type)
 {
   memset(annotations, 0, sizeof(annotations));
-  memset(uid, 0, sizeof(uid));
-  this->name = std::move(name);
+  memset(handle, 0, sizeof(handle));
+  this->name = name.Get();
 
   static tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
+
+  bool name_owns_buffer = name.OwnsBuffer();
+  if (name_owns_buffer)
+  {
+    internal_data.copied_strings.emplace_back(std::move(name));
+  }
+
   if (non_standard_name && (type_info->type_traits & trait_flags::cIS_DATA_TYPE))
   {
-    tInternalData::tRenamingEntry entry(util::tManagedConstCharPointer(util::Demangle(type_info->std_type_info.name()).c_str(), true), util::tManagedConstCharPointer(this->name.Get(), false));
-
-    // Search for existing entry
-    bool found = false;
-    for (auto & e : internal_data.renamed_types)
+    tInternalData::tRenamingEntry entry(util::tManagedConstCharPointer(util::Demangle(type_info->std_type_info.name()).c_str(), true), this->name);
+    if (strcmp(entry.first.Get(), entry.second) != 0)
     {
-      if (strcmp(e.first.Get(), entry.first.Get()) == 0)
+      // Search for existing entry
+      bool found = false;
+      for (auto & e : internal_data.renamed_types)
       {
-        // Custom entry has already been inserted
-        this->name = util::tManagedConstCharPointer(e.second.Get(), false);
-        found = true;
-        break;
+        if (strcmp(e.first.Get(), entry.first.Get()) == 0)
+        {
+          // Custom entry has already been inserted
+          this->name = e.second;
+          found = true;
+          if (name_owns_buffer)
+          {
+            internal_data.copied_strings.pop_back();
+          }
+          break;
+        }
+      }
+      if (!found)
+      {
+        auto insert_it = std::upper_bound(internal_data.renamed_types.begin(), internal_data.renamed_types.end(), entry, tRenamedTypeCompare());
+        internal_data.renamed_types.insert(insert_it, std::move(entry));
       }
     }
-    if (!found)
+    else
     {
-      auto insert_it = std::upper_bound(internal_data.renamed_types.begin(), internal_data.renamed_types.end(), entry, tRenamedTypeCompare());
-      internal_data.renamed_types.insert(insert_it, std::move(entry));
+      RRLIB_LOG_PRINT(DEBUG_WARNING, "Non-standard name set for ", entry.first.Get(), " that actually equals default name");
     }
   }
 
@@ -460,21 +483,14 @@ void tTypeInfo::tSharedInfo::Register(const tTypeInfo* type_info, const tTypeInf
   static tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
 
-  size_t new_types = type_info_list ? 2 : 1;
-  if (internal_data.types.size() + new_types > cMAX_TYPES)
-  {
-    RRLIB_LOG_PRINT(ERROR, "Maximum number of data types exceeded. Increase cMAX_TYPES.");
-    throw std::runtime_error("Maximum number of data types exceeded. Increase cMAX_TYPES.");
-  }
-
-  uid[0] = internal_data.types.size();
-  internal_data.types.push_back(type_info);
+  handle[0] = static_cast<short>(internal_data.types.Size());
+  internal_data.types.Add(tType(type_info));
   if (type_info_list)
   {
-    uid[1] = internal_data.types.size();
-    internal_data.types.push_back(type_info_list);
+    handle[1] = static_cast<short>(internal_data.types.Size());
+    internal_data.types.Add(tType(type_info_list));
   }
-  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Adding data type ", name.Get());
+  RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Adding data type ", name);
 }
 
 std::string tTypeInfo::tSharedInfo::RemoveNamespaces(const std::string& type_name)
@@ -510,25 +526,48 @@ void tTypeInfo::tSharedInfo::SetName(util::tManagedConstCharPointer new_name, co
 {
   static tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
-  name = std::move(new_name);
-  RRLIB_LOG_PRINT(DEBUG, type_info->std_type_info.name(), " " , this->name.Get());
-
-  tInternalData::tRenamingEntry entry(util::tManagedConstCharPointer(util::Demangle(type_info->std_type_info.name()).c_str(), true), util::tManagedConstCharPointer(name.Get(), false));
-
-  // Search for existing entry
-  for (auto & e : internal_data.renamed_types)
+  bool is_registered = handle[0] < internal_data.types.Size() && internal_data.types[handle[0]].info->shared_info == this;
+  if (is_registered && strcmp(name, new_name.Get()) == 0)
   {
-    if (strcmp(e.first.Get(), entry.first.Get()) == 0)
+    return;
+  }
+
+  // Can old name entry in copied_strings be removed?
+  if (is_registered)
+  {
+    for (auto it = internal_data.copied_strings.begin(); it != internal_data.copied_strings.end(); ++it)
     {
-      // Custom entry has already been inserted
-      abort();
+      if (strcmp(it->Get(), name) == 0)
+      {
+        internal_data.copied_strings.erase(it);
+        break;
+      }
     }
   }
-  auto insert_it = std::upper_bound(internal_data.renamed_types.begin(), internal_data.renamed_types.end(), entry, tRenamedTypeCompare());
-  internal_data.renamed_types.insert(insert_it, std::move(entry));
+
+  name = new_name.Get();
+  if (new_name.OwnsBuffer())
+  {
+    internal_data.copied_strings.emplace_back(std::move(new_name));
+  }
+
+  tInternalData::tRenamingEntry entry(util::tManagedConstCharPointer(util::Demangle(type_info->std_type_info.name()).c_str(), true), name);
+  if (strcmp(entry.first.Get(), entry.second) != 0)
+  {
+    // Search for existing entry
+    for (auto & e : internal_data.renamed_types)
+    {
+      if (strcmp(e.first.Get(), entry.first.Get()) == 0)
+      {
+        abort();
+      }
+    }
+    auto insert_it = std::upper_bound(internal_data.renamed_types.begin(), internal_data.renamed_types.end(), entry, tRenamedTypeCompare());
+    internal_data.renamed_types.insert(insert_it, std::move(entry));
+  }
 }
 
-tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, make_builder::internal::tEnumStrings& enum_strings) :
+tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings) :
   tSharedInfo(type_info, type_info_list, underlying_type, get_typename_function, false),
   enum_strings(enum_strings)
 {
@@ -544,3 +583,4 @@ tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, const tT
 }
 }
 }
+

@@ -188,7 +188,7 @@ struct IsDefaultConstructionZeroMemory
 template <typename T>
 struct TypeName
 {
-  enum { cTYPE_DEFINED_IN_RRLIB_RTTI_WITH_NONSTANDARD_NAME = std::is_integral<T>::value || std::is_floating_point<T>::value || std::is_same<T, std::string>::value || std::is_same<T, bool>::value || std::is_same<T, rrlib::time::tDuration>::value || std::is_same<T, rrlib::time::tTimestamp>::value };
+  enum { cTYPE_DEFINED_IN_RRLIB_RTTI_WITH_NONSTANDARD_NAME = (std::is_integral<T>::value || std::is_same<T, std::string>::value || std::is_same<T, rrlib::time::tDuration>::value || std::is_same<T, rrlib::time::tTimestamp>::value) && (!std::is_same<T, bool>::value) };
 
   static constexpr tGetTypenameFunction value = cTYPE_DEFINED_IN_RRLIB_RTTI_WITH_NONSTANDARD_NAME ? &detail::tTypeInfo::GetTypeNameDefinedInRRLibRtti : &detail::tTypeInfo::GetDefaultTypeName;
 };
@@ -224,7 +224,7 @@ struct IsStdVector<std::vector<T>>
 namespace trait_flags
 {
 
-// Bits for different traits
+// Bits for different traits (bytes 2 and 3 are sent to connection partners)
 static const int cIS_LIST_TYPE = 1;                          // position 1 - so that (flags & 1) is index in uid list
 static const int cSERIALIZATION_FUNCTION_OFFSET_BITS = 0x7E; // offset of serialization operation function pointers (flags & cSERIALIZATION_OFFSET_BITS is offset from tTypeInfo pointer)
 static const int cBINARY_OPERATION_FUNCTION_POINTERS = 0x80;
@@ -241,14 +241,17 @@ static const int cHAS_UNDERLYING_TYPE = 1 << 15;
 static const int cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 16;
 static const int cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID = 1 << 17;
 static const int cIS_CAST_FROM_UNDERLYING_TYPE_IMPLICIT = 1 << 18;
-static const int cSUPPORTS_BITWISE_COPY = 1 << 19;
+static const int cIS_UNDERLYING_TYPE_BINARY_SERIALIZATION_DIFFERENT = 1 << 19;
+static const int cSUPPORTS_BITWISE_COPY = 1 << 20;
 //static const int cHAS_DIFFERENT_BINARY_SERIALIZATION_THAN_UNDERLYING_TYPE = 1 << 20;
 
-static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 20;
-static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 21;
-static const int cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY = 1 << 22;
-/*static const int cIS_INTEGRAL = 1 << 22;
-static const int cIS_SIGNED = 1 << 23;
+static const int cIS_INTEGRAL = 1 << 21;
+static const int cIS_LIST_TYPE_COPY = 1 << 22;  // copy of first flag (so that this info is also transferred to connection partners)
+static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 23;
+
+static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 24;
+static const int cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY = 1 << 25;
+/*static const int cIS_SIGNED = 1 << 23;
 
 static const int cIS_ABSTRACT = 1 << 16;
 static const int cIS_ARITHMETIC = 1 << 17;
@@ -261,6 +264,8 @@ static const int cIS_POD = 1 << 24;
 static const int cIS_POINTER = 1 << 25;
 static const int cIS_SCALAR = 1 << 26;
 static const int cIS_UNSIGNED = 1 << 28;*/
+
+static_assert((cIS_LIST_TYPE | cIS_DATA_TYPE) == detail::tTypeInfo::cLIST_TRAIT_FLAGS, "Flag inconsistency");
 
 } // namespace
 
@@ -280,7 +285,7 @@ struct TypeTraitsVector
 
   // Bit vector for type (the remaining flags are set in the code)
   static const uint32_t value =
-    (IsStdVector<T>::value ? trait_flags::cIS_LIST_TYPE : 0) |
+    (IsStdVector<T>::value ? (trait_flags::cIS_LIST_TYPE | trait_flags::cIS_LIST_TYPE_COPY) : 0) |
     cSERIALIZATION_FUNCTION_OFFSET | // offset
 
     (serialization::IsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
@@ -293,11 +298,13 @@ struct TypeTraitsVector
     (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<T, typename UnderlyingType<T>::type>::value ? trait_flags::cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::cREVERSE_CAST_VALID ? trait_flags::cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<typename UnderlyingType<T>::type, T>::value ? trait_flags::cIS_CAST_FROM_UNDERLYING_TYPE_IMPLICIT : 0) |
+    (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::cBINARY_SERIALIZATION_DIFFERS ? trait_flags::cIS_UNDERLYING_TYPE_BINARY_SERIALIZATION_DIFFERENT : 0) |
     (SupportsBitwiseCopy<T>::value ? trait_flags::cSUPPORTS_BITWISE_COPY : 0) |
 
     (std::has_virtual_destructor<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
     (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
-    (IsDefaultConstructionZeroMemory<T>::value ? trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY : 0)
+    (IsDefaultConstructionZeroMemory<T>::value ? trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY : 0) |
+    (std::is_integral<T>::value ? trait_flags::cIS_INTEGRAL : 0)
 
     /*(std::is_abstract<T>::value ? trait_flags::cIS_ABSTRACT : 0) |
     (std::is_arithmetic<T>::value ? trait_flags::cIS_ARITHMETIC : 0) |
