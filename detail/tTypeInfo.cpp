@@ -85,7 +85,7 @@ struct tInternalData
   std::vector<tRenamingEntry> renamed_types;
   typedef std::pair<const char*, unsigned int> tAnnotationTableEntry; // typeid(TAnnotation).name(), offset
   std::vector<tAnnotationTableEntry> annotation_table;
-  typedef std::pair<const char*, const tTypeInfo*> tNameLookupEntry; // name, type info
+  typedef std::pair<util::tManagedConstCharPointer, const tTypeInfo*> tNameLookupEntry; // name, type info
   std::vector<tNameLookupEntry> name_lookup;
   std::vector<util::tManagedConstCharPointer> copied_strings;
 
@@ -209,9 +209,9 @@ const tType tTypeInfo::FindType(const std::string& name)
   // additional lookup
   {
     std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
-    tInternalData::tNameLookupEntry entry(name.c_str(), nullptr);
+    tInternalData::tNameLookupEntry entry(util::tManagedConstCharPointer(name.c_str(), false), nullptr);
     auto it = std::lower_bound(internal_data.name_lookup.begin(), internal_data.name_lookup.end(), entry);
-    if (it != internal_data.name_lookup.end() && it->first == name)
+    if (it != internal_data.name_lookup.end() && it->first.Get() == name)
     {
       return tType(it->second);
     }
@@ -365,6 +365,16 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
   tSharedInfo(type_info, type_info_list, underlying_type, (*get_typename_function)(tType(type_info)), get_typename_function != &GetDefaultTypeName, register_types_now)
 {}
 
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenamesFunction get_typename_function, bool register_types_now) :
+  tSharedInfo(type_info, type_info_list, underlying_type, std::move((*get_typename_function)(tType(type_info))[0]), true, register_types_now)
+{
+  auto names = (*get_typename_function)(tType(type_info));
+  for (auto it = names.begin() + 1; it < names.end(); ++it)
+  {
+    AddName(type_info, std::move(*it));
+  }
+}
+
 tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool register_types_now) :
   tSharedInfo(type_info, type_info_list, underlying_type, std::move(name), true, register_types_now)
 {}
@@ -469,13 +479,13 @@ void tTypeInfo::tSharedInfo::AddAnnotationImplementation(const void* annotation,
   memcpy(&annotations[ann_index], annotation, size);
 }
 
-void tTypeInfo::tSharedInfo::AddName(const tTypeInfo* type_info, const char* name)
+void tTypeInfo::tSharedInfo::AddName(const tTypeInfo* type_info, util::tManagedConstCharPointer name)
 {
   tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
-  tInternalData::tNameLookupEntry entry(name, type_info);
+  tInternalData::tNameLookupEntry entry(std::move(name), type_info);
   auto insert_it = std::upper_bound(internal_data.name_lookup.begin(), internal_data.name_lookup.end(), entry);
-  internal_data.name_lookup.insert(insert_it, entry);
+  internal_data.name_lookup.insert(insert_it, std::move(entry));
 }
 
 void tTypeInfo::tSharedInfo::Register(const tTypeInfo* type_info, const tTypeInfo* type_info_list)

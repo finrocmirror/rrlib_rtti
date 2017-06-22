@@ -62,6 +62,7 @@ template <typename T>
 class tDataType;
 
 typedef util::tManagedConstCharPointer(*tGetTypenameFunction)(const tType& type);
+typedef std::vector<util::tManagedConstCharPointer>(*tGetTypenamesFunction)(const tType& type);
 
 //----------------------------------------------------------------------
 // Function declarations
@@ -184,6 +185,8 @@ struct IsDefaultConstructionZeroMemory
  * (possibly because they are more readable - or to retain backward-compatibility).
  * Notably, a name can also be specified in the tDataType() constructor.
  * This type trait, however, is useful for defining default names for templates.
+ *
+ * To assign additional secondary type names, value may also be a tGetTypenamesFunction
  */
 template <typename T>
 struct TypeName

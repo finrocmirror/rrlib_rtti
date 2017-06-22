@@ -72,6 +72,7 @@ namespace detail
  * \return Name for type (nullptr to keep default name)
  */
 typedef util::tManagedConstCharPointer(*tGetTypenameFunction)(const tType& type);
+typedef std::vector<util::tManagedConstCharPointer>(*tGetTypenamesFunction)(const tType& type);
 
 
 //----------------------------------------------------------------------
@@ -105,6 +106,7 @@ struct tTypeInfo
      * \param register_types_now Register type at the end of constructor? (should be false, for subclasses)
      */
     tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenamesFunction get_typename_function, bool register_types_now = true);
     tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool register_types_now = true);
     tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, const char* name, bool register_types_now = true);
 
@@ -191,7 +193,7 @@ struct tTypeInfo
      * \param type_info Data type that additional name is for
      * \param name Another name supported for lookup
      */
-    static void AddName(const tTypeInfo* type_info, const char* name);
+    static void AddName(const tTypeInfo* type_info, util::tManagedConstCharPointer name);
 
     /*!
      * \param type_name Type name (in rrlib::rtti) format

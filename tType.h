@@ -136,7 +136,7 @@ public:
    */
   inline tType& AddName(const char* name)
   {
-    detail::tTypeInfo::tSharedInfo::AddName(info, name);
+    detail::tTypeInfo::tSharedInfo::AddName(info, util::tManagedConstCharPointer(name, false));
     return *this;
   }
 
