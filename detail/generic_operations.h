@@ -169,9 +169,11 @@ struct DeepCopyOperation<T, true, false, Tconvertible_normalized>
 };
 
 
-template <typename T, bool Tis_default_construction_zero_memory = IsDefaultConstructionZeroMemory<T>::value, bool Tno_arg_constructor = std::is_base_of<serialization::DefaultImplementation, serialization::DefaultInstantiation<T>>::value>
+template <typename T, bool Tis_default_construction_zero_memory = IsDefaultConstructionZeroMemory<T>::value, bool Tno_arg_constructor = std::is_base_of<serialization::DefaultImplementation, serialization::DefaultInstantiation<T>>::value, bool Tenum = std::is_enum<T>::value>
 struct ConstructorFunction
 {
+  static_assert(!Tenum, "Invalid for enum");
+
   static void Construct(void* placement)
   {
     new(placement) T();
@@ -181,7 +183,10 @@ struct ConstructorFunction
 };
 
 template <typename T>
-struct ConstructorFunction<T, false, false>
+struct ConstructorFunction<T, false, false, true>; // see tDataTypeInfo.h
+
+template <typename T>
+struct ConstructorFunction<T, false, false, false>
 {
   static void Construct(void* placement)
   {
@@ -192,9 +197,9 @@ struct ConstructorFunction<T, false, false>
 };
 
 template <typename T, bool Tno_arg_constructor>
-struct ConstructorFunction<T, true, Tno_arg_constructor>
+struct ConstructorFunction<T, true, Tno_arg_constructor, false>
 {
-  void* const value = nullptr;
+  static constexpr operations::tConstructor value = nullptr;
 };
 
 
@@ -212,7 +217,7 @@ struct DeepCopyFunction
 template <typename T>
 struct DeepCopyFunction<T, true>
 {
-  void* const value = nullptr;
+  static constexpr operations::tDeepCopy value = nullptr;
 };
 
 
@@ -264,7 +269,7 @@ struct DestructorFunction
 template <typename T>
 struct DestructorFunction<T, true>
 {
-  void* const value = nullptr;
+  static constexpr operations::tDestructor value = nullptr;
 };
 
 
@@ -285,7 +290,7 @@ struct EqualsFunction
 template <typename T, bool Tequals_operator, bool Tbinary_serializable>
 struct EqualsFunction<T, Tequals_operator, Tbinary_serializable, true>
 {
-  void* const value = nullptr;
+  static constexpr operations::tEquals value = nullptr;
 };
 
 template <typename T, bool Tbinary_serializable>

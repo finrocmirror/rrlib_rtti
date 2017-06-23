@@ -176,7 +176,7 @@ struct IsVectorTypeSupported
 template <typename T>
 struct IsDefaultConstructionZeroMemory
 {
-  enum { value = SupportsBitwiseCopy<T>::value };
+  enum { value = SupportsBitwiseCopy<T>::value && (!std::is_enum<T>::value) };
 };
 
 /*!

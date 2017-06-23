@@ -434,6 +434,7 @@ struct tDataTypeInfo<T, eTLF_ENUM>
   struct tTable
   {
     tTypeInfo data_type_info;
+    tBinaryOperations binary_operations;
     tBinarySerializationOperations binary_serialization_operations;
     typename std::conditional<serialization::IsStringSerializable<T>::value, tStringSerializationOperations, tXMLSerializationOperations>::type other_serialization_operations;
     tTypeInfo list_type_info;
@@ -444,6 +445,7 @@ struct tDataTypeInfo<T, eTLF_ENUM>
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
+    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
     { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
     { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value }, // Other serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
@@ -503,6 +505,26 @@ tTypeInfo::tSharedInfoEnum tDataTypeInfo<T, eTLF_ENUM>::shared_info(&tDataTypeIn
     &tDataTypeInfo<typename UnderlyingType<T>::type>::value.data_type_info,
     TypeName<T>::value,
     make_builder::internal::GetEnumStrings<T>());
+
+
+template <typename T>
+struct ConstructorFunction<T, false, false, true>
+{
+  static void Construct(void* placement)
+  {
+    const make_builder::internal::tEnumStrings& enum_strings = tDataTypeInfo<T>::shared_info.enum_strings;
+    if (enum_strings.non_standard_values)
+    {
+      memcpy(placement, enum_strings.non_standard_values, sizeof(T));
+    }
+    else
+    {
+      memset(placement, 0, sizeof(T));
+    }
+  }
+
+  static constexpr operations::tConstructor value = &Construct;
+};
 
 //----------------------------------------------------------------------
 // End of namespace declaration
