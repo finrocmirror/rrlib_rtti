@@ -64,6 +64,14 @@ namespace test
 // Forward declarations / typedefs / enums
 //----------------------------------------------------------------------
 
+enum class tTestEnum
+{
+  VALUE1,
+  VALUE2,
+  VALUE3,
+  VALUE4
+};
+
 //----------------------------------------------------------------------
 // Const values
 //----------------------------------------------------------------------
@@ -100,6 +108,7 @@ class tTestTraitsRtti : public util::tUnitTestSuite
   RRLIB_UNIT_TESTS_ADD_TEST(TestTypeNaming);
   RRLIB_UNIT_TESTS_ADD_TEST(TestGenericOperations);
   RRLIB_UNIT_TESTS_ADD_TEST(TestDataTypeInstantiation);
+  RRLIB_UNIT_TESTS_ADD_TEST(TestDeepCopy);
   RRLIB_UNIT_TESTS_END_SUITE;
 
 private:
@@ -180,6 +189,35 @@ private:
     tDataType<long unsigned int> ulong_type;
     tDataType<std::vector<long unsigned int>> ulong_vector_type;
     RRLIB_UNIT_TESTS_ASSERT(ulong_type == ulong_vector_type.GetElementType());
+  }
+
+  void TestDeepCopy()
+  {
+    {
+      std::vector<size_t> v1 = { 1, 3, 4 }, v2;
+      rrlib::rtti::GenericOperations<std::vector<size_t>>::DeepCopy(v1, v2);
+      RRLIB_UNIT_TESTS_ASSERT(v1 == v2);
+    }
+    {
+      std::vector<long int> v1 = { 1, 3, 4 }, v2;
+      rrlib::rtti::GenericOperations<std::vector<long int>>::DeepCopy(v1, v2);
+      RRLIB_UNIT_TESTS_ASSERT(v1 == v2);
+    }
+    {
+      std::vector<tTestEnum> v1 = { tTestEnum::VALUE1, tTestEnum::VALUE3, tTestEnum::VALUE4 }, v2;
+      rrlib::rtti::GenericOperations<std::vector<tTestEnum>>::DeepCopy(v1, v2);
+      RRLIB_UNIT_TESTS_ASSERT(v1 == v2);
+    }
+    {
+      long int i1 = 1, i2 = 2;
+      rrlib::rtti::GenericOperations<long int>::DeepCopy(i1, i2);
+      RRLIB_UNIT_TESTS_ASSERT(i1 == i2);
+    }
+    {
+      tTestEnum i1 = tTestEnum::VALUE1, i2 = tTestEnum::VALUE3;
+      rrlib::rtti::GenericOperations<tTestEnum>::DeepCopy(i1, i2);
+      RRLIB_UNIT_TESTS_ASSERT(i1 == i2);
+    }
   }
 
 };

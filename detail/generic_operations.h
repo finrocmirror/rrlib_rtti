@@ -143,11 +143,13 @@ struct DeepCopyOperationContainer<std::vector<TElement>, TElement, false, true>
 
 
 
-template < typename T, bool Tunderlying_type = !std::is_same<typename UnderlyingType<T>::type, T>::value, bool Tconvertible = std::is_convertible<T, typename UnderlyingType<T>::type>::value, bool Tconvertible_normalized = std::is_convertible<T, typename NormalizedType<T>::type>::value >
-struct DeepCopyOperation : std::conditional<serialization::IsSerializableContainer<T>::value, detail::DeepCopyOperationContainer<typename NormalizedType<T>::type>, detail::DeepCopyOperationNonContainer<typename NormalizedType<T>::type>>::type
+template < typename T, bool Tcontainer = serialization::IsSerializableContainer<T>::value, bool Tunderlying_type = !std::is_same<typename UnderlyingType<T>::type, T>::value, bool Tconvertible = std::is_convertible<T, typename UnderlyingType<T>::type>::value, bool Tconvertible_normalized = std::is_convertible<T, typename NormalizedType<T>::type>::value >
+struct DeepCopyOperation : std::conditional<Tcontainer, detail::DeepCopyOperationContainer<typename NormalizedType<T>::type>, detail::DeepCopyOperationNonContainer<T>>::type
 {};
+
+// specializations to reduce the many equivalent std::vector deep copy operations
 template <typename T> // e.g. for std::vector<size_t> and std::vector<long int>, which is not assignable
-struct DeepCopyOperation<T, false, true, false>
+struct DeepCopyOperation<T, true, false, true, false>
 {
   inline static void DeepCopy(const T& source, T& destination)
   {
@@ -155,11 +157,8 @@ struct DeepCopyOperation<T, false, true, false>
     rtti::DeepCopyOperation<tNormalized>::DeepCopy(reinterpret_cast<const tNormalized&>(source), reinterpret_cast<tNormalized&>(destination));
   }
 };
-template <typename T, bool Tconvertible_normalized>
-struct DeepCopyOperation<T, true, true, Tconvertible_normalized> : rtti::DeepCopyOperation<typename UnderlyingType<T>::type>
-{};
-template <typename T, bool Tconvertible_normalized>
-struct DeepCopyOperation<T, true, false, Tconvertible_normalized>
+template <typename T, bool Tconvertible, bool Tconvertible_normalized>
+struct DeepCopyOperation<T, true, true, Tconvertible, Tconvertible_normalized>
 {
   inline static void DeepCopy(const T& source, T& destination)
   {
