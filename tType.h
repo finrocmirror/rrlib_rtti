@@ -140,6 +140,12 @@ public:
     return *this;
   }
 
+
+  inline tGenericObject* CreateInstanceGeneric() const __attribute__((deprecated))
+  {
+    return CreateGenericObject();
+  }
+
   /*!
    * Creates object of this data type wrapped as tGenericObject
    *
