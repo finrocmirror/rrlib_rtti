@@ -121,7 +121,7 @@ struct tDataTypeInfo<T, eTLF_BINARY_OPS>
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value } // Binary operations
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value } // Binary operations
   };
 };
 
@@ -136,7 +136,7 @@ struct tDataTypeInfo<T, eTLF_BINARY_SERIALIZATION>
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value } // Binary serialization
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
   };
 };
 
@@ -152,8 +152,8 @@ struct tDataTypeInfo < T, eTLF_BINARY_SERIALIZATION | eTLF_BINARY_OPS >
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value } // Binary serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
   };
 };
 
@@ -168,7 +168,7 @@ struct tDataTypeInfo<T, eTLF_OTHER_SERIALIZATION>
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value } // Other serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
 };
 
@@ -184,8 +184,8 @@ struct tDataTypeInfo < T, eTLF_OTHER_SERIALIZATION | eTLF_BINARY_OPS >
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value } // Other serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
 };
 
@@ -201,8 +201,8 @@ struct tDataTypeInfo < T, eTLF_OTHER_SERIALIZATION | eTLF_BINARY_SERIALIZATION >
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value } // Other serialization
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
 };
 
@@ -219,9 +219,9 @@ struct tDataTypeInfo < T, eTLF_OTHER_SERIALIZATION | eTLF_BINARY_SERIALIZATION |
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value } // Other serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
 };
 
@@ -240,8 +240,8 @@ struct tDataTypeInfo<T, eTLF_VECTOR_TYPE>
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value } // Vectory binary operations 2
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value } // Vectory binary operations 2
   };
 };
 
@@ -260,10 +260,10 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_BINARY_OPS >
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value } // Vectory binary operations 2
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value } // Vectory binary operations 2
   };
 };
 
@@ -283,11 +283,11 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_BINARY_SERIALIZATION >
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromBinaryFunction<V>::value, SerializeToBinaryFunction<V>::value } // Binary serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromBinaryFunction<V>::value, rtti::SerializeToBinaryFunction<V>::value } // Binary serialization
   };
 };
 
@@ -308,12 +308,12 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_BINARY_SERIALIZATION | eTLF_BI
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromBinaryFunction<V>::value, SerializeToBinaryFunction<V>::value } // Binary serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromBinaryFunction<V>::value, rtti::SerializeToBinaryFunction<V>::value } // Binary serialization
   };
 };
 
@@ -333,11 +333,11 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_OTHER_SERIALIZATION >
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value }, // Other serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value }, // Other serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromXMLFunction<V>::value, SerializeToXMLFunction<V>::value } // XML serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromXMLFunction<V>::value, rtti::SerializeToXMLFunction<V>::value } // XML serialization
   };
 };
 
@@ -358,12 +358,12 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_OTHER_SERIALIZATION | eTLF_BIN
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value }, // Other serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value }, // Other serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromXMLFunction<V>::value, SerializeToXMLFunction<V>::value } // XML serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromXMLFunction<V>::value, rtti::SerializeToXMLFunction<V>::value } // XML serialization
   };
 };
 
@@ -385,13 +385,13 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_OTHER_SERIALIZATION | eTLF_BIN
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value }, // Other serialization
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value }, // Other serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromBinaryFunction<V>::value, SerializeToBinaryFunction<V>::value }, // Binary serialization
-    { DeserializeFromXMLFunction<V>::value, SerializeToXMLFunction<V>::value } // XML serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromBinaryFunction<V>::value, rtti::SerializeToBinaryFunction<V>::value }, // Binary serialization
+    { rtti::DeserializeFromXMLFunction<V>::value, rtti::SerializeToXMLFunction<V>::value } // XML serialization
   };
 };
 
@@ -414,14 +414,14 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_OTHER_SERIALIZATION | eTLF_BIN
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value }, // Other serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value }, // Other serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromBinaryFunction<V>::value, SerializeToBinaryFunction<V>::value }, // Binary serialization
-    { DeserializeFromXMLFunction<V>::value, SerializeToXMLFunction<V>::value } // XML serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromBinaryFunction<V>::value, rtti::SerializeToBinaryFunction<V>::value }, // Binary serialization
+    { rtti::DeserializeFromXMLFunction<V>::value, rtti::SerializeToXMLFunction<V>::value } // XML serialization
   };
 };
 
@@ -445,14 +445,14 @@ struct tDataTypeInfo<T, eTLF_ENUM>
   } static constexpr value =
   {
     { typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(T) }, // Type info
-    { ConstructorFunction<T>::value, DestructorFunction<T>::value, DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
-    { DeserializeFromBinaryFunction<T>::value, SerializeToBinaryFunction<T>::value }, // Binary serialization
-    { std::conditional<serialization::IsStringSerializable<T>::value, DeserializeFromStringFunction<T>, DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, SerializeToStringFunction<T>, SerializeToXMLFunction<T>>::type::value }, // Other serialization
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
+    { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value }, // Other serialization
     { typeid(V), TypeTraitsVector<V>::value | trait_flags::cIS_DATA_TYPE, &shared_info, sizeof(V) },  // Vector Type info
-    { ConstructorFunction<V>::value, DestructorFunction<V>::value, DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
-    { GetVectorElementFunction<V>::value, GetVectorSizeFunction<V>::value, ResizeVectorFunction<V>::value }, // Vectory binary operations 2
-    { DeserializeFromBinaryFunction<V>::value, SerializeToBinaryFunction<V>::value }, // Binary serialization
-    { DeserializeFromXMLFunction<V>::value, SerializeToXMLFunction<V>::value } // XML serialization
+    { rtti::ConstructorFunction<V>::value, rtti::DestructorFunction<V>::value, rtti::DeepCopyFunction<V>::value, EqualsFunction<V>::value }, // Vector binary operations 1
+    { rtti::GetVectorElementFunction<V>::value, rtti::GetVectorSizeFunction<V>::value, rtti::ResizeVectorFunction<V>::value }, // Vectory binary operations 2
+    { rtti::DeserializeFromBinaryFunction<V>::value, rtti::SerializeToBinaryFunction<V>::value }, // Binary serialization
+    { rtti::DeserializeFromXMLFunction<V>::value, rtti::SerializeToXMLFunction<V>::value } // XML serialization
   };
 };
 

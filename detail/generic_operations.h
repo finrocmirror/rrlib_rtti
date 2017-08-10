@@ -441,7 +441,7 @@ struct SerializeToXMLFunction
 } // namespace detail
 
 template <typename T>
-struct ConstructorFunction : std::conditional < !std::is_same<typename UnderlyingType<T>::type, T>::value, ConstructorFunction<typename UnderlyingType<T>::type>, detail::ConstructorFunction<typename NormalizedType<T>::type >>::type
+struct ConstructorFunction : detail::ConstructorFunction<typename NormalizedType<T>::type>
 {};
 
 template <typename T>
