@@ -136,8 +136,17 @@ private:
     {
       tDataType<TypeTraitRenamedClass> type;
       tDataType<std::vector<TypeTraitRenamedClass>> type_list;
+      type.AddName("Another Custom Name");
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Custom Name' are not equal", type.GetName() == "Custom Name", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Custom Name>' are not equal", type_list.GetName() == "List<Custom Name>", true);
+      RRLIB_UNIT_TESTS_ASSERT(type.HasName("Custom Name"));
+      RRLIB_UNIT_TESTS_ASSERT(type.HasName("Another Custom Name"));
+      RRLIB_UNIT_TESTS_ASSERT(!type.HasName("Other Name"));
+      RRLIB_UNIT_TESTS_ASSERT(type_list.HasName("List<Custom Name>"));
+      RRLIB_UNIT_TESTS_ASSERT(type_list.HasName("List<Another Custom Name>"));
+      RRLIB_UNIT_TESTS_ASSERT(!type_list.HasName("List<Other Name>"));
+      RRLIB_UNIT_TESTS_ASSERT(!type_list.HasName("Custom Name"));
+      RRLIB_UNIT_TESTS_ASSERT(!type_list.HasName("Another Custom Name"));
     }
     {
       tDataType<std::tuple<std::string, rrlib::time::tTimestamp, std::vector<std::string>>> type;

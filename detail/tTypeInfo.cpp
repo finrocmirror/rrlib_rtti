@@ -361,6 +361,31 @@ util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
   return util::tManagedConstCharPointer(name, true);
 }
 
+bool tTypeInfo::HasName(const std::string& name) const
+{
+  tInternalData& internal_data = GetInternalData();
+  if (!shared_info)
+  {
+    return false;
+  }
+  if (IsListType())
+  {
+    return util::StartsWith(name, "List<") && util::EndsWith(name, ">") && internal_data.types[shared_info->handle[0]].HasName(name.substr(5, name.length() - 6));
+  }
+  if (name == shared_info->name)
+  {
+    return true;
+  }
+
+  {
+    std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
+    tInternalData::tNameLookupEntry entry(util::tManagedConstCharPointer(name.c_str(), false), nullptr);
+    auto it = std::lower_bound(internal_data.name_lookup.begin(), internal_data.name_lookup.end(), entry);
+    return it != internal_data.name_lookup.end() && it->first.Get() == name && it->second == this;
+  }
+}
+
+
 tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, bool register_types_now) :
   tSharedInfo(type_info, type_info_list, underlying_type, (*get_typename_function)(tType(type_info)), get_typename_function != &GetDefaultTypeName, register_types_now)
 {}

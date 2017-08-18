@@ -283,6 +283,14 @@ struct tTypeInfo
   static util::tManagedConstCharPointer GetTypeNameDefinedInRRLibRtti(const tType& type);
 
   /*!
+   * (note: this is significantly more efficient than calling FindType(name))
+   *
+   * \param name Name to check
+   * \return Whether any of this type's names equals 'name'
+   */
+  bool HasName(const std::string& name) const;
+
+  /*!
    * \return Is this a list type? (std::vector<T> of some type T)
    */
   inline bool IsListType() const

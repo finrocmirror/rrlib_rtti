@@ -384,6 +384,17 @@ public:
   }
 
   /*!
+   * (note: this is significantly more efficient than calling FindType(name))
+   *
+   * \param name Name to check
+   * \return Whether any of this type's names equals 'name'
+   */
+  inline bool HasName(const std::string& name) const
+  {
+    return info->HasName(name);
+  }
+
+  /*!
    * \return Is this a list type? (std::vector<T> of some type T)
    */
   inline bool IsListType() const
