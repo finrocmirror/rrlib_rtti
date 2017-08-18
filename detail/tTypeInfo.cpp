@@ -75,6 +75,9 @@ const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_fla
 // Implementation
 //----------------------------------------------------------------------
 
+namespace
+{
+
 struct tInternalData
 {
   tTypeInfo::tSharedInfo::tRegisteredTypes types;
@@ -112,10 +115,12 @@ struct tRenamedTypeCompare
   }
 };
 
-static tInternalData& GetInternalData()
+tInternalData& GetInternalData()
 {
   static tInternalData internal_data;
   return internal_data;
+}
+
 }
 
 const tTypeInfo::tSharedInfo::tRegisteredTypes* tTypeInfo::tSharedInfo::registered_types = &GetInternalData().types;
