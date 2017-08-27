@@ -83,16 +83,13 @@ struct tInternalData
   tTypeInfo::tSharedInfo::tRegisteredTypes types;
 
   std::recursive_mutex mutex;
-  size_t next_annotation_index;
   typedef std::pair<util::tManagedConstCharPointer, const char*> tRenamingEntry;  // first: original demangled type name; second: actual type name
   std::vector<tRenamingEntry> renamed_types;
-  typedef std::pair<const char*, unsigned int> tAnnotationTableEntry; // typeid(TAnnotation).name(), offset
-  std::vector<tAnnotationTableEntry> annotation_table;
   typedef std::pair<util::tManagedConstCharPointer, const tTypeInfo*> tNameLookupEntry; // name, type info
   std::vector<tNameLookupEntry> name_lookup;
   std::vector<util::tManagedConstCharPointer> copied_strings;
 
-  tInternalData() : types(), mutex(), next_annotation_index(0)
+  tInternalData() : types(), mutex()
   {
     types.Add(tType());
   }
@@ -417,7 +414,6 @@ tTypeInfo::tSharedInfo::tSharedInfo(std::nullptr_t) :
   name("NULL"),
   underlying_type(&cNULL_TYPE_INFO)
 {
-  memset(annotations, 0, sizeof(annotations));
   handle[0] = 0;
   handle[1] = 0;
 }
@@ -426,7 +422,6 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
   name(),
   underlying_type(underlying_type)
 {
-  memset(annotations, 0, sizeof(annotations));
   memset(handle, 0, sizeof(handle));
   this->name = name.Get();
 
@@ -476,37 +471,6 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
   {
     Register(type_info, type_info_list);
   }
-}
-
-void tTypeInfo::tSharedInfo::AddAnnotationImplementation(const void* annotation, size_t size, const char* rtti_name, tAnnotationIndex& annotation_index)
-{
-  tInternalData& internal_data = GetInternalData();
-  std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
-
-  tInternalData::tAnnotationTableEntry entry(nullptr, 0);
-  for (auto & e : internal_data.annotation_table)
-  {
-    if (e.first == rtti_name)
-    {
-      entry = e;
-      break;
-    }
-  }
-  if (!entry.first)
-  {
-    annotation_index.first = internal_data.next_annotation_index;
-    annotation_index.second = true;
-    internal_data.next_annotation_index += size;
-    if (internal_data.next_annotation_index > cMAX_ANNOTATION_SIZE)
-    {
-      RRLIB_LOG_PRINT(ERROR, "Maximum number of annotations (tType::cMAX_ANNOTATION_SIZE) exceeded. Aborting.");
-      abort();
-    }
-    internal_data.annotation_table.emplace_back(rtti_name, annotation_index.first);
-  }
-  size_t ann_index = annotation_index.first;
-  assert(ann_index + size < cMAX_ANNOTATION_SIZE);
-  memcpy(&annotations[ann_index], annotation, size);
 }
 
 void tTypeInfo::tSharedInfo::AddName(const tTypeInfo* type_info, util::tManagedConstCharPointer name)

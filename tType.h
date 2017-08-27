@@ -105,29 +105,6 @@ public:
 
   constexpr tType() : info(&detail::tTypeInfo::cNULL_TYPE_INFO) {}
 
-  /*!
-   * Add annotation to this data type.
-   * Annotations added to the null/empty-type are discarded.
-   * Adding annotations is not supported during static variable initialization phase (they might be zeroed out afterwards).
-   *
-   * \param annotation Type of annotation to add (is copied)
-   *                   Requirements for suitable data types for annotations are
-   *                   - SupportsBitwiseCopy<T>::value is true
-   *                   - IsDefaultConstructionZeroMemory<T>::value
-   *                   - sizeof(T) <= 2 * sizeof(void*)
-   * \tparam T Annotation type.
-   *           T is used for lookup later.
-   *           Only one annotation object per type T may be added. A second call will overwrite the first value.
-   */
-  template <typename T>
-  inline void AddAnnotation(const T& annotation)
-  {
-    static_assert(sizeof(annotation) <= 2 * sizeof(void*) && SupportsBitwiseCopy<T>::value && IsDefaultConstructionZeroMemory<T>::value, "Annotation type is unsuitable");
-    if (info != &detail::tTypeInfo::cNULL_TYPE_INFO)
-    {
-      GetSharedInfo().AddAnnotation(annotation);
-    }
-  }
 
   /*!
    * Adds name for lookup of this data type (e.g. to support legacy data type names)
@@ -226,24 +203,6 @@ public:
   static inline tType FindTypeByRtti(const char* rtti_name)
   {
     return detail::tTypeInfo::FindTypeByRtti(rtti_name);
-  }
-
-  /*!
-   * Get annotation of specified class
-   *
-   * \tparam T Class of annotation to obtain
-   * \return Annotation. Zero-Default-constructed object if annotation has not been set for this type.
-   */
-  template <typename T>
-  inline T GetAnnotation() const
-  {
-    if (detail::tTypeInfo::tSharedInfo::tAnnotationIndexHolder<T>::index.second)
-    {
-      T t;
-      memcpy(&t, &GetSharedInfo().annotations[detail::tTypeInfo::tSharedInfo::tAnnotationIndexHolder<T>::index.first], sizeof(T));
-      return t;
-    }
-    return T();
   }
 
   /*!

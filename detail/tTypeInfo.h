@@ -84,8 +84,6 @@ typedef std::vector<util::tManagedConstCharPointer>(*tGetTypenamesFunction)(cons
  */
 struct tTypeInfo
 {
-  /*! Memory allocated for annotations in each type */
-  enum { cMAX_ANNOTATION_SIZE = 3 * sizeof(void*) };
 
   /*!
    * Shared data type info (possibly shared between plain types an their respective list types)
@@ -139,24 +137,12 @@ struct tTypeInfo
     friend class rtti::tType;
     friend struct tTypeInfo;
 
-    typedef std::pair<int, bool> tAnnotationIndex; // offset in array, valid
-
-    /*! Helper struct for annotating types */
-    template <typename T>
-    struct tAnnotationIndexHolder
-    {
-      static tAnnotationIndex index;
-    };
-
 
     /*! Name of plain data type */
     const char* name;
 
     /*! Contains pointer to underlying type (see UnderlyingType type trait) */
     const tTypeInfo* underlying_type;
-
-    /*! Annotations to data type */
-    char annotations[cMAX_ANNOTATION_SIZE];
 
     /*! Data type handle (index 1 is list type; -1 if there is no list type) */
     uint16_t handle[2];
@@ -166,26 +152,6 @@ struct tTypeInfo
 
 
     tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now);
-
-    /*!
-     * Add annotation to this type info.
-     * Annotations added to the null/empty-type are discarded.
-     *
-     * \param annotation Annotation to add (is copied)
-     * \tparam T Annotation type.
-     *           T is used for lookup later.
-     *           Only one annotation object per type T may be added. A second call will overwrite the first value.
-     */
-    template <typename T>
-    inline void AddAnnotation(const T& annotation)
-    {
-      AddAnnotationImplementation(reinterpret_cast<const void*>(&annotation), sizeof(T), typeid(T).name(), tAnnotationIndexHolder<T>::index);
-    }
-
-    /*!
-     * Implementation of AddAnnotation function
-     */
-    void AddAnnotationImplementation(const void* annotation, size_t size, const char* rtti_name, tAnnotationIndex& annotation_index);
 
     /*!
      * Adds name for lookup of specified data type (e.g. to support legacy data type names)
@@ -298,9 +264,6 @@ struct tTypeInfo
     return (type_traits & cLIST_TRAIT_FLAGS) == cLIST_TRAIT_FLAGS;
   }
 };
-
-template <typename T>
-tTypeInfo::tSharedInfo::tAnnotationIndex tTypeInfo::tSharedInfo::tAnnotationIndexHolder<T>::index(0, false);
 
 //----------------------------------------------------------------------
 // End of namespace declaration
