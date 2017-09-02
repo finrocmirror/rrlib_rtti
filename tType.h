@@ -210,7 +210,7 @@ public:
    */
   inline tType GetElementType() const
   {
-    return IsListType() ? GetType(GetSharedInfo().handle[0]) : tType();
+    return tType(info->element_type);
   }
 
   /*!
@@ -226,16 +226,13 @@ public:
    */
   inline uint16_t GetHandle() const
   {
-    return GetSharedInfo().handle[info->IsListType() ? 1 : 0];
+    return GetSharedInfo().handle;
   }
 
   /*!
-   * \return If this is a plain type and a list type has been initialized: list type (std::vector<T>) - otherwise NULL
+   * TODO \return If this is a plain type and a list type has been initialized: list type (std::vector<T>) - otherwise NULL
    */
-  inline tType GetListType() const
-  {
-    return (info->type_traits & (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE)) == (trait_flags::cHAS_LIST_TYPE | trait_flags::cIS_DATA_TYPE) ? GetType(GetSharedInfo().handle[1]) : tType();
-  }
+  tType GetListType() const;
 
   /*!
    * (this is not particularly efficient as it allocates memory - use alternatives such as GetPlainTypeName() or stream operators if efficiency/real-time is desired)
@@ -246,36 +243,11 @@ public:
   {
     if (IsListType())
     {
-      size_t length = strlen(GetSharedInfo().name);
-      char buffer[length + 10];
-      memcpy(buffer, "List<", 5);
-      memcpy(buffer + 5, GetSharedInfo().name, length);
-      buffer[5 + length] = '>';
-      buffer[6 + length] = 0;
-      return buffer;
+      std::stringstream stream;
+      stream << "List<" << GetElementType().GetName() << '>';
+      return stream.str();
     }
     return GetSharedInfo().name;
-  }
-
-  /*!
-   * Efficient variant of GetName()
-   *
-   * \param buffer Buffer that name is written to. Should have size >= strlen(GetPlainTypeName() + 7)
-   */
-  void GetName(char* buffer) const
-  {
-    size_t length = strlen(GetSharedInfo().name);
-    if (IsListType())
-    {
-      memcpy(buffer, "List<", 5);
-      memcpy(buffer + 5, GetSharedInfo().name, length);
-      buffer[5 + length] = '>';
-      buffer[6 + length] = 0;
-    }
-    else
-    {
-      memcpy(buffer, GetSharedInfo().name, length + 1);
-    }
   }
 
   /*!
@@ -283,7 +255,7 @@ public:
    */
   const char* GetPlainTypeName() const
   {
-    return GetSharedInfo().name;
+    return IsListType() ? GetElementType().GetPlainTypeName() : GetSharedInfo().name;
   }
 
   /*!
@@ -338,8 +310,7 @@ public:
    */
   inline tType GetUnderlyingType() const
   {
-    tType underlying_plain_type(GetSharedInfo().underlying_type);
-    return IsListType() ? underlying_plain_type.GetListType() : underlying_plain_type;
+    return tType(info->underlying_type);
   }
 
   /*!

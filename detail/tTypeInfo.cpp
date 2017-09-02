@@ -69,7 +69,7 @@ namespace detail
 //----------------------------------------------------------------------
 
 static tTypeInfo::tSharedInfo cNULL_TYPE_SHARED_INFO(nullptr);
-const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY, &cNULL_TYPE_SHARED_INFO, 0 };
+const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY, &cNULL_TYPE_INFO, &cNULL_TYPE_INFO, &cNULL_TYPE_SHARED_INFO, 0 };
 
 //----------------------------------------------------------------------
 // Implementation
@@ -288,6 +288,11 @@ util::tManagedConstCharPointer tTypeInfo::GetTypeNameDefinedInRRLibRtti(const tT
 
 util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
 {
+  if (type.IsListType())
+  {
+    return util::tManagedConstCharPointer();
+  }
+
   std::string demangled = util::Demangle(type.GetRttiName());
 
   static tInternalData& internal_data = GetInternalData();
@@ -372,7 +377,7 @@ bool tTypeInfo::HasName(const std::string& name) const
   }
   if (IsListType())
   {
-    return util::StartsWith(name, "List<") && util::EndsWith(name, ">") && internal_data.types[shared_info->handle[0]].HasName(name.substr(5, name.length() - 6));
+    return util::StartsWith(name, "List<") && util::EndsWith(name, ">") && tType(element_type).HasName(name.substr(5, name.length() - 6));
   }
   if (name == shared_info->name)
   {
@@ -388,12 +393,12 @@ bool tTypeInfo::HasName(const std::string& name) const
 }
 
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, bool register_types_now) :
-  tSharedInfo(type_info, type_info_list, underlying_type, (*get_typename_function)(tType(type_info)), get_typename_function != &GetDefaultTypeName, register_types_now)
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, bool register_types_now) :
+  tSharedInfo(type_info, (*get_typename_function)(tType(type_info)), get_typename_function != &GetDefaultTypeName, register_types_now)
 {}
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenamesFunction get_typename_function, bool register_types_now) :
-  tSharedInfo(type_info, type_info_list, underlying_type, std::move((*get_typename_function)(tType(type_info))[0]), true, register_types_now)
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFunction get_typename_function, bool register_types_now) :
+  tSharedInfo(type_info, std::move((*get_typename_function)(tType(type_info))[0]), true, register_types_now)
 {
   auto names = (*get_typename_function)(tType(type_info));
   for (auto it = names.begin() + 1; it < names.end(); ++it)
@@ -402,28 +407,26 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
   }
 }
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool register_types_now) :
-  tSharedInfo(type_info, type_info_list, underlying_type, std::move(name), true, register_types_now)
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, bool register_types_now) :
+  tSharedInfo(type_info, std::move(name), true, register_types_now)
 {}
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, const char* name, bool register_types_now) :
-  tSharedInfo(type_info, type_info_list, underlying_type, util::tManagedConstCharPointer(name, false), true, register_types_now)
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const char* name, bool register_types_now) :
+  tSharedInfo(type_info, util::tManagedConstCharPointer(name, false), true, register_types_now)
 {}
 
 tTypeInfo::tSharedInfo::tSharedInfo(std::nullptr_t) :
   name("NULL"),
-  underlying_type(&cNULL_TYPE_INFO)
+  handle(0)
 {
-  handle[0] = 0;
-  handle[1] = 0;
 }
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now) :
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now) :
   name(),
-  underlying_type(underlying_type)
+  handle(0)
 {
-  memset(handle, 0, sizeof(handle));
   this->name = name.Get();
+  assert((!type_info->IsListType()) || name.Get() == nullptr);
 
   static tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
@@ -469,7 +472,7 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const tTypeInfo*
 
   if (register_types_now)
   {
-    Register(type_info, type_info_list);
+    Register(type_info);
   }
 }
 
@@ -482,18 +485,13 @@ void tTypeInfo::tSharedInfo::AddName(const tTypeInfo* type_info, util::tManagedC
   internal_data.name_lookup.insert(insert_it, std::move(entry));
 }
 
-void tTypeInfo::tSharedInfo::Register(const tTypeInfo* type_info, const tTypeInfo* type_info_list)
+void tTypeInfo::tSharedInfo::Register(const tTypeInfo* type_info)
 {
   static tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
 
-  handle[0] = static_cast<short>(internal_data.types.Size());
+  handle = static_cast<short>(internal_data.types.Size());
   internal_data.types.Add(tType(type_info));
-  if (type_info_list)
-  {
-    handle[1] = static_cast<short>(internal_data.types.Size());
-    internal_data.types.Add(tType(type_info_list));
-  }
   RRLIB_LOG_PRINT(DEBUG_VERBOSE_1, "Adding data type ", name);
 }
 
@@ -530,7 +528,7 @@ void tTypeInfo::tSharedInfo::SetName(util::tManagedConstCharPointer new_name, co
 {
   static tInternalData& internal_data = GetInternalData();
   std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
-  bool is_registered = handle[0] < internal_data.types.Size() && internal_data.types[handle[0]].info->shared_info == this;
+  bool is_registered = handle < internal_data.types.Size() && internal_data.types[handle].info->shared_info == this;
   if (is_registered && strcmp(name, new_name.Get()) == 0)
   {
     return;
@@ -571,12 +569,12 @@ void tTypeInfo::tSharedInfo::SetName(util::tManagedConstCharPointer new_name, co
   }
 }
 
-tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings) :
-  tSharedInfo(type_info, type_info_list, underlying_type, get_typename_function, false),
+tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings) :
+  tSharedInfo(type_info, get_typename_function, false),
   enum_strings(enum_strings)
 {
   // register types now
-  this->Register(type_info, type_info_list);
+  this->Register(type_info);
 }
 
 

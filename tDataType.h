@@ -93,24 +93,6 @@ public:
   }
 };
 
-template<typename T>
-class tDataType<std::vector<T>> : public tType
-{
-  typedef typename NormalizedType<T>::type tNormalizedType;
-  typedef detail::tDataTypeInfo<tNormalizedType> tInfo;
-  static_assert(!IsStdVector<T>::value, "");
-  static_assert(!IsStdVector<tNormalizedType>::value, "");
-
-//----------------------------------------------------------------------
-// Public methods and typedefs
-//----------------------------------------------------------------------
-public:
-
-  constexpr tDataType() : tType(&tInfo::value.list_type_info)
-  {
-  }
-};
-
 // Types defined in this library
 extern template class tDataType<serialization::tMemoryBuffer>;
 extern template class tDataType<int8_t>;

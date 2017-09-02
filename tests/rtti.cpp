@@ -130,8 +130,10 @@ private:
     {
       tDataType<RenamedClass> type("Class3");
       tDataType<std::vector<RenamedClass>> type_list;
+      tDataType<std::vector<std::vector<RenamedClass>>> type_list_list;
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Class3' are not equal", type.GetName() == "Class3", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Class3>' are not equal", type_list.GetName() == "List<Class3>", true);
+      RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list_list.GetName() + "' and 'List<List<Class3>>' are not equal", type_list_list.GetName() == "List<List<Class3>>", true);
     }
     {
       tDataType<TypeTraitRenamedClass> type;
@@ -182,6 +184,8 @@ private:
     TestGenericOperations(test_vector);
     std::vector<bool> test_vector_bool = { false, true, true };
     TestGenericOperations(test_vector_bool);
+    std::vector<std::vector<bool>> test_vector_vector_bool = { test_vector_bool, test_vector_bool };
+    TestGenericOperations(test_vector_vector_bool);
 
     tBuffer buffer;
     serialization::tOutputStream stream(buffer);

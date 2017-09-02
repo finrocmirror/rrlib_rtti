@@ -66,6 +66,18 @@ namespace rtti
 // Implementation
 //----------------------------------------------------------------------
 
+tType tType::GetListType() const
+{
+  for (const tType & type : GetTypeRegister())
+  {
+    if ((type.GetTypeTraits() & trait_flags::cIS_LIST_TYPE) && type.GetElementType() == *this)
+    {
+      return tType(type.info);
+    }
+  }
+  return tType();
+}
+
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& type)
 {
   if (tType::GetTypeRegister().WriteEntry(stream, type.GetHandle()))

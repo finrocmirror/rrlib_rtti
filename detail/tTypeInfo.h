@@ -97,16 +97,15 @@ struct tTypeInfo
 
     /*!
      * \param type_info Type info of plain type
-     * \param type_info Type info of std::vector type (may be nullptr)
      * \param underlying_type Type info of underlying type referenced in UnderlyingType trait
      * \param get_typename_function Function to obtain name of plain type with
      * \param name Name of plain type
      * \param register_types_now Register type at the end of constructor? (should be false, for subclasses)
      */
-    tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, bool register_types_now = true);
-    tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenamesFunction get_typename_function, bool register_types_now = true);
-    tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool register_types_now = true);
-    tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, const char* name, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFunction get_typename_function, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, const char* name, bool register_types_now = true);
 
     /*!
      * Constructor for null-type
@@ -128,9 +127,8 @@ struct tTypeInfo
      * Registers type (type is assigned handle in this step and added to list of available types)
      *
      * \param type_info Type info of type to register
-     * \param type_info Type info of list type to register
      */
-    void Register(const tTypeInfo* type_info, const tTypeInfo* type_info_list);
+    void Register(const tTypeInfo* type_info);
 
   private:
 
@@ -141,17 +139,14 @@ struct tTypeInfo
     /*! Name of plain data type */
     const char* name;
 
-    /*! Contains pointer to underlying type (see UnderlyingType type trait) */
-    const tTypeInfo* underlying_type;
-
-    /*! Data type handle (index 1 is list type; -1 if there is no list type) */
-    uint16_t handle[2];
+    /*! Data type handle */
+    uint16_t handle;
 
     /*! Register of registered types */
     static const tRegisteredTypes* registered_types;
 
 
-    tSharedInfo(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now);
+    tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, bool non_standard_name, bool register_types_now);
 
     /*!
      * Adds name for lookup of specified data type (e.g. to support legacy data type names)
@@ -180,7 +175,7 @@ struct tTypeInfo
      * \param name Name of plain type
      * \param enum_strings Enum String for this type
      */
-    tSharedInfoEnum(const tTypeInfo* type_info, const tTypeInfo* type_info_list, const tTypeInfo* underlying_type, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings);
+    tSharedInfoEnum(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings);
 
     /*! pointer to enum string constants data - if this is an enum type */
     const make_builder::internal::tEnumStrings& enum_strings;
@@ -194,6 +189,12 @@ struct tTypeInfo
 
   /*! Bit vector of type traits determined at compile time (see TypeTraitsVector) + from constructor */
   uint32_t type_traits;
+
+  /*! Contains pointer to underlying type (see UnderlyingType type trait) */
+  const tTypeInfo* underlying_type;
+
+  /*! Contains pointer to element type (see ElementType type trait) */
+  const tTypeInfo* element_type;
 
   /* Pointer to shared type info (initialized at runtime) */
   tSharedInfo* shared_info;
@@ -237,7 +238,7 @@ struct tTypeInfo
    */
   inline uint16_t GetHandle() const
   {
-    return shared_info->handle[IsListType() ? 1 : 0];
+    return shared_info->handle;
   }
 
   /*!

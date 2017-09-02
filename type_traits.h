@@ -141,6 +141,16 @@ struct UnderlyingType<std::vector<T>>
   enum { cOTHER_SERIALIZATION_DIFFERS = UnderlyingType<T>::cOTHER_SERIALIZATION_DIFFERS };
 };
 
+template <typename TFlag, typename TStorage>
+struct UnderlyingType<rrlib::util::tEnumBasedFlags<TFlag, TStorage>>
+{
+  typedef TStorage type;
+  enum { cREVERSE_CAST_VALID = true };
+  enum { cBINARY_SERIALIZATION_DIFFERS = false };
+  enum { cOTHER_SERIALIZATION_DIFFERS = true };
+};
+
+
 /*!
  * Type trait that defines whether an object of type T can be safely deep-copied
  * using memcpy and whether equality can be tested using memcmp.
@@ -389,6 +399,12 @@ struct NormalizedType<bool>
 {
   typedef bool type;
 };
+template <>
+struct NormalizedType<void>
+{
+  typedef void type;
+};
+
 
 /*!
  * Type trait to determine whether type T is 'normalized'
@@ -398,6 +414,22 @@ struct IsNormalizedType
 {
   enum { value = std::is_same<T, typename NormalizedType<T>::type>::value };
 };
+
+/*!
+ * Type traits to determine element type if T is STL container or rrlib::util::tEnumBasedFlags - otherwise void
+ */
+template <typename T>
+struct ElementType
+{
+  typedef typename serialization::IsSerializableContainer<T>::tValue type;
+};
+
+template <typename TFlag, typename TStorage>
+struct ElementType<rrlib::util::tEnumBasedFlags<TFlag, TStorage>>
+{
+  typedef TFlag type;
+};
+
 
 //----------------------------------------------------------------------
 // End of namespace declaration
