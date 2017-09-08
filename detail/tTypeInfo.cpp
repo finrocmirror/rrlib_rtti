@@ -197,12 +197,41 @@ const tType tTypeInfo::FindType(const std::string& name)
   {
     return tType::FindType(name.substr(5, name.length() - 6)).GetListType();
   }
+  bool array_type = util::StartsWith(name, "Array<") && util::EndsWith(name, ">");
+  if (array_type)
+  {
+    std::string inner_string = name.substr(6, name.length() - 7);
+    auto comma_pos = inner_string.rfind(',');
+    if (comma_pos == std::string::npos)
+    {
+      return tType();
+    }
+    std::string element_type_name = inner_string.substr(0, comma_pos);
+    std::string size_string = inner_string.substr(comma_pos + 1);
+    rrlib::util::TrimWhitespace(element_type_name);
+    rrlib::util::TrimWhitespace(size_string);
+    tType element_type = tType::FindType(element_type_name);
+    size_t array_size = atoi(size_string.c_str());
+    if ((!element_type) || array_size == 0)
+    {
+      return tType();
+    }
+    static tInternalData& internal_data = GetInternalData();
+    for (const tType & type : internal_data.types)
+    {
+      if (type.IsArray() && type.GetElementType() == element_type && type.GetArraySize() == array_size)
+      {
+        return type;
+      }
+    }
+    return tType();
+  }
 
   // main names
   static tInternalData& internal_data = GetInternalData();
   for (const tType & type : internal_data.types)
   {
-    if ((!type.IsListType()) && name == type.info->shared_info->name)
+    if ((!type.IsListType()) && (!type.IsArray()) && name == type.info->shared_info->name)
     {
       return type;
     }
@@ -236,7 +265,7 @@ const tType tTypeInfo::FindType(const std::string& name)
       buffer[0] = '.';
       memcpy(&buffer[1], name.c_str(), name.length());
       buffer[name.length() + 1] = 0;
-      if ((!type.IsListType()) && rrlib::util::EndsWith(type.info->shared_info->name, buffer))
+      if ((!type.IsListType()) && (!type.IsArray()) && rrlib::util::EndsWith(type.info->shared_info->name, buffer))
       {
         return type;
       }
@@ -288,7 +317,7 @@ util::tManagedConstCharPointer tTypeInfo::GetTypeNameDefinedInRRLibRtti(const tT
 
 util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
 {
-  if (type.IsListType())
+  if (type.IsListType() || type.IsArray())
   {
     return util::tManagedConstCharPointer();
   }
@@ -375,9 +404,17 @@ bool tTypeInfo::HasName(const std::string& name) const
   {
     return false;
   }
+  tType this_type(this);
   if (IsListType())
   {
+    // TODO: this can be optimized
     return util::StartsWith(name, "List<") && util::EndsWith(name, ">") && tType(element_type).HasName(name.substr(5, name.length() - 6));
+  }
+  else if (this_type.IsArray())
+  {
+    // TODO: this can be optimized
+    std::string postfix = ", " + std::to_string(this_type.GetArraySize()) + ">";
+    return util::StartsWith(name, "Array<") && util::EndsWith(name, postfix) && tType(element_type).HasName(name.substr(6, name.length() - (6 + postfix.length())));
   }
   if (name == shared_info->name)
   {
@@ -393,11 +430,11 @@ bool tTypeInfo::HasName(const std::string& name) const
 }
 
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, bool register_types_now) :
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const tTypeInfo* list_type, int auto_registered, bool register_types_now) :
   tSharedInfo(type_info, (*get_typename_function)(tType(type_info)), get_typename_function != &GetDefaultTypeName, register_types_now)
 {}
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFunction get_typename_function, bool register_types_now) :
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFunction get_typename_function, const tTypeInfo* list_type, int auto_registered, bool register_types_now) :
   tSharedInfo(type_info, std::move((*get_typename_function)(tType(type_info))[0]), true, register_types_now)
 {
   auto names = (*get_typename_function)(tType(type_info));
@@ -407,11 +444,11 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFun
   }
 }
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, bool register_types_now) :
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, const tTypeInfo* list_type, int auto_registered, bool register_types_now) :
   tSharedInfo(type_info, std::move(name), true, register_types_now)
 {}
 
-tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const char* name, bool register_types_now) :
+tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, const char* name, const tTypeInfo* list_type, int auto_registered, bool register_types_now) :
   tSharedInfo(type_info, util::tManagedConstCharPointer(name, false), true, register_types_now)
 {}
 
@@ -569,8 +606,8 @@ void tTypeInfo::tSharedInfo::SetName(util::tManagedConstCharPointer new_name, co
   }
 }
 
-tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings) :
-  tSharedInfo(type_info, get_typename_function, false),
+tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings, const tTypeInfo* list_type, int auto_registered) :
+  tSharedInfo(type_info, get_typename_function, list_type, auto_registered, false),
   enum_strings(enum_strings)
 {
   // register types now

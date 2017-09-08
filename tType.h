@@ -206,6 +206,14 @@ public:
   }
 
   /*!
+   * \return Size of array if this is an array type; otherwise 1
+   */
+  inline size_t GetArraySize() const
+  {
+    return IsArray() ? (GetSize() / GetElementType().GetSize()) : 1;
+  }
+
+  /*!
    * \return In case of list: type of elements; otherwise null-type
    */
   inline tType GetElementType() const
@@ -230,7 +238,7 @@ public:
   }
 
   /*!
-   * TODO \return If this is a plain type and a list type has been initialized: list type (std::vector<T>) - otherwise NULL
+   * \return If this is a plain type and a list type has been initialized: list type (std::vector<T>) - otherwise NULL
    */
   tType GetListType() const;
 
@@ -239,23 +247,14 @@ public:
    *
    * \return Name of data type
    */
-  std::string GetName() const
-  {
-    if (IsListType())
-    {
-      std::stringstream stream;
-      stream << "List<" << GetElementType().GetName() << '>';
-      return stream.str();
-    }
-    return GetSharedInfo().name;
-  }
+  std::string GetName() const;
 
   /*!
    * \return Returns type name of plain/element type (this is == GetName() for all non-list types T; for std::vector<T> it is, however, also the one for T)
    */
   const char* GetPlainTypeName() const
   {
-    return IsListType() ? GetElementType().GetPlainTypeName() : GetSharedInfo().name;
+    return (IsListType() || IsArray()) ? GetElementType().GetPlainTypeName() : GetSharedInfo().name;
   }
 
   /*!
@@ -322,6 +321,14 @@ public:
   inline bool HasName(const std::string& name) const
   {
     return info->HasName(name);
+  }
+
+  /*!
+   * \return Is this an array type? (std::vector<T> of some type T)
+   */
+  inline bool IsArray() const
+  {
+    return info->type_traits & trait_flags::cIS_ARRAY;
   }
 
   /*!

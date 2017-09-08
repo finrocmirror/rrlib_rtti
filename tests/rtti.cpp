@@ -76,7 +76,9 @@ enum class tTestEnum
 // Const values
 //----------------------------------------------------------------------
 static_assert(detail::HasCopyFromMethod<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
-static_assert(IsVectorTypeSupported<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
+static_assert(AutoRegisterVectorType<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
+static_assert(SupportsBitwiseCopy<std::array<int, 4>>::value, "Trait not implemented correctly");
+
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
@@ -131,9 +133,11 @@ private:
       tDataType<RenamedClass> type("Class3");
       tDataType<std::vector<RenamedClass>> type_list;
       tDataType<std::vector<std::vector<RenamedClass>>> type_list_list;
+      tDataType<std::array<RenamedClass, 4>> type_array;
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Class3' are not equal", type.GetName() == "Class3", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list.GetName() + "' and 'List<Class3>' are not equal", type_list.GetName() == "List<Class3>", true);
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_list_list.GetName() + "' and 'List<List<Class3>>' are not equal", type_list_list.GetName() == "List<List<Class3>>", true);
+      RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type_array.GetName() + "' and 'Array<Class3, 4>' are not equal", type_array.GetName() == "Array<Class3, 4>", true);
     }
     {
       tDataType<TypeTraitRenamedClass> type;
@@ -186,6 +190,8 @@ private:
     TestGenericOperations(test_vector_bool);
     std::vector<std::vector<bool>> test_vector_vector_bool = { test_vector_bool, test_vector_bool };
     TestGenericOperations(test_vector_vector_bool);
+    std::array<std::vector<bool>, 2> test_vector_bool_array = { test_vector_bool, test_vector_bool };
+    TestGenericOperations(test_vector_bool_array);
 
     tBuffer buffer;
     serialization::tOutputStream stream(buffer);

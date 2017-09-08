@@ -100,12 +100,14 @@ struct tTypeInfo
      * \param underlying_type Type info of underlying type referenced in UnderlyingType trait
      * \param get_typename_function Function to obtain name of plain type with
      * \param name Name of plain type
+     * \param list_type Unused parameter (used to auto-register list types)
+     * \param auto_registered Unused parameter (used for additional auto-registration)
      * \param register_types_now Register type at the end of constructor? (should be false, for subclasses)
      */
-    tSharedInfo(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, bool register_types_now = true);
-    tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFunction get_typename_function, bool register_types_now = true);
-    tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, bool register_types_now = true);
-    tSharedInfo(const tTypeInfo* type_info, const char* name, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const tTypeInfo* list_type, int auto_registered, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, tGetTypenamesFunction get_typename_function, const tTypeInfo* list_type, int auto_registered, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, util::tManagedConstCharPointer name, const tTypeInfo* list_type, int auto_registered, bool register_types_now = true);
+    tSharedInfo(const tTypeInfo* type_info, const char* name, const tTypeInfo* list_type, int auto_registered, bool register_types_now = true);
 
     /*!
      * Constructor for null-type
@@ -169,13 +171,12 @@ struct tTypeInfo
 
     /*!
      * \param type_info Type info of plain type
-     * \param type_info Type info of std::vector type (may be nullptr)
-     * \param underlying_type Type info of underlying type referenced in UnderlyingType trait
      * \param get_typename_function Function to obtain name of plain type with
-     * \param name Name of plain type
      * \param enum_strings Enum String for this type
+     * \param list_type Unused parameter (used to auto-register list types)
+     * \param auto_registered Unused parameter (used for additional auto-registration)
      */
-    tSharedInfoEnum(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings);
+    tSharedInfoEnum(const tTypeInfo* type_info, tGetTypenameFunction get_typename_function, const make_builder::internal::tEnumStrings& enum_strings, const tTypeInfo* list_type, int auto_registered);
 
     /*! pointer to enum string constants data - if this is an enum type */
     const make_builder::internal::tEnumStrings& enum_strings;
@@ -201,6 +202,17 @@ struct tTypeInfo
 
   /*! sizeof(T) - required by some generic functions */
   uint32_t size;
+
+
+  constexpr tTypeInfo(const std::type_info& std_type_info, uint32_t type_traits, const tTypeInfo* underlying_type, const tTypeInfo* element_type, tSharedInfo* shared_info, uint32_t size) :
+    std_type_info(std_type_info),
+    type_traits(type_traits),
+    underlying_type(underlying_type == nullptr ? this : underlying_type),
+    element_type(element_type),
+    shared_info(shared_info),
+    size(size)
+  {}
+
 
   enum { cLIST_TRAIT_FLAGS = 1 | (1 << 12) };   // the complete set of flags is declared in type_traits.h
 

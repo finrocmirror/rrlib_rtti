@@ -78,13 +78,31 @@ tType tType::GetListType() const
   return tType();
 }
 
+std::string tType::GetName() const
+{
+  if (IsListType())
+  {
+    std::stringstream stream;
+    stream << "List<" << GetElementType().GetName() << '>';
+    return stream.str();
+  }
+  else if (IsArray())
+  {
+    std::stringstream stream;
+    stream << "Array<" << GetElementType().GetName() << ", " << GetArraySize() << '>';
+    return stream.str();
+  }
+  return GetSharedInfo().name;
+}
+
+
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& type)
 {
   if (tType::GetTypeRegister().WriteEntry(stream, type.GetHandle()))
   {
-    if (type.IsListType())
+    if (type.IsListType() || type.IsArray())
     {
-      stream << "List<" << type.GetPlainTypeName() << '>';
+      stream << type.GetName();
     }
     else
     {
@@ -103,24 +121,24 @@ serialization::tInputStream& operator >> (serialization::tInputStream& stream, t
   return stream;
 }
 
-serialization::tStringOutputStream& operator << (serialization::tStringOutputStream& stream, const tType& dt)
+serialization::tStringOutputStream& operator << (serialization::tStringOutputStream& stream, const tType& type)
 {
-  if (dt.IsListType())
+  if (type.IsListType() || type.IsArray())
   {
-    stream << "List<" << dt.GetPlainTypeName() << '>';
+    stream << type.GetName();
   }
   else
   {
-    stream << dt.GetPlainTypeName();
+    stream << type.GetPlainTypeName();
   }
   return stream;
 }
 
-serialization::tStringInputStream& operator >> (serialization::tStringInputStream& stream, tType& dt)
+serialization::tStringInputStream& operator >> (serialization::tStringInputStream& stream, tType& type)
 {
   std::string s;
   stream >> s;
-  dt = tType::FindType(s);
+  type = tType::FindType(s);
   return stream;
 }
 

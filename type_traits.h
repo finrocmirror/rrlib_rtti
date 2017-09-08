@@ -141,6 +141,15 @@ struct UnderlyingType<std::vector<T>>
   enum { cOTHER_SERIALIZATION_DIFFERS = UnderlyingType<T>::cOTHER_SERIALIZATION_DIFFERS };
 };
 
+template <typename T, size_t N>
+struct UnderlyingType<std::array<T, N>>
+{
+  typedef std::array<typename UnderlyingType<T>::type, N> type;
+  enum { cREVERSE_CAST_VALID = UnderlyingType<T>::cREVERSE_CAST_VALID };
+  enum { cBINARY_SERIALIZATION_DIFFERS = UnderlyingType<T>::cBINARY_SERIALIZATION_DIFFERS };
+  enum { cOTHER_SERIALIZATION_DIFFERS = UnderlyingType<T>::cOTHER_SERIALIZATION_DIFFERS };
+};
+
 template <typename TFlag, typename TStorage>
 struct UnderlyingType<rrlib::util::tEnumBasedFlags<TFlag, TStorage>>
 {
@@ -168,11 +177,11 @@ struct SupportsBitwiseCopy
 };
 
 /*!
- * Type trait that determines whether std::vector<T> is supported by rrlib_rtti.
- * May need to be specialized if inadequate for some type T.
+ * Type trait that determines whether std::vector<T> is automatically registered
+ * when a data type T is registered.
  */
 template <typename T>
-struct IsVectorTypeSupported
+struct AutoRegisterVectorType
 {
   enum { value = (!serialization::IsSerializableContainer<T>::value) && (std::is_move_constructible<T>::value || std::is_copy_constructible<T>::value || std::is_move_assignable<T>::value || std::is_copy_assignable<T>::value) };
 };
@@ -207,16 +216,15 @@ struct TypeName
 };
 
 /*!
- * This trait defines which other types should be registered (if they have not been already)
+ * This trait defines which other types/conversion operations should be registered (if they have not been already)
  * when a tDataType<T> object is created.
- *
- * Typically, if e.g. tDataType<int> is created, tDataType<std::vector<int>> is also registered
  */
 template <typename T>
-struct AutoRegisterRelatedTypes
+struct AutoRegister
 {
-  static void Register()
+  static constexpr int Register()
   {
+    return 0;
   }
 };
 
@@ -233,6 +241,9 @@ struct IsStdVector<std::vector<T>>
   enum { value = true };
 };
 
+template <typename T>
+using IsStdArray = serialization::IsStdArray<T>;
+
 
 namespace trait_flags
 {
@@ -248,7 +259,7 @@ static const int cIS_XML_SERIALIZABLE = 1 << 10;
 static const int cIS_ENUM = 1 << 11;
 static const int cIS_DATA_TYPE = 1 << 12;
 static const int cIS_RPC_TYPE = 1 << 13;
-static const int cHAS_LIST_TYPE = 1 << 14;
+static const int cIS_ARRAY = 1 << 14;
 
 static const int cHAS_UNDERLYING_TYPE = 1 << 15;
 static const int cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 16;
@@ -306,7 +317,7 @@ struct TypeTraitsVector
     (serialization::IsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0) |
 
     (std::is_enum<T>::value ? trait_flags::cIS_ENUM : 0) |
-    (IsVectorTypeSupported<T>::value ? trait_flags::cHAS_LIST_TYPE : 0) |
+    (IsStdArray<T>::value ? trait_flags::cIS_ARRAY : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE ? trait_flags::cHAS_UNDERLYING_TYPE : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<T, typename UnderlyingType<T>::type>::value ? trait_flags::cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::cREVERSE_CAST_VALID ? trait_flags::cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID : 0) |
@@ -393,6 +404,11 @@ template <typename T>
 struct NormalizedType<std::vector<T>>
 {
   typedef std::vector<typename NormalizedType<T>::type> type;
+};
+template <typename T, size_t N>
+struct NormalizedType<std::array<T, N>>
+{
+  typedef std::array<typename NormalizedType<T>::type, N> type;
 };
 template <>
 struct NormalizedType<bool>
