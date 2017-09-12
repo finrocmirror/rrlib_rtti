@@ -64,6 +64,7 @@ enum tTableLayoutFlags
   eTLF_OTHER_SERIALIZATION = 4,
   eTLF_VECTOR_TYPE = 8,
   eTLF_ENUM = 16,
+  eTLF_TUPLE = 32
 };
 
 //----------------------------------------------------------------------
@@ -73,10 +74,11 @@ template <typename T>
 struct TableLayoutFlags
 {
   enum { value = std::is_enum<T>::value ? eTLF_ENUM :
-                 ((IsStdVector<T>::value ? eTLF_VECTOR_TYPE : 0) |
+                 (((IsStdPair<T>::value || IsStdTuple<T>::value) ? eTLF_TUPLE : 0) |
+                  (IsStdVector<T>::value ? eTLF_VECTOR_TYPE : 0) |
                   (!(SupportsBitwiseCopy<T>::value && IsDefaultConstructionZeroMemory<T>::value) ? eTLF_BINARY_OPS : 0) |
                   (serialization::IsBinarySerializable<T>::value ? eTLF_BINARY_SERIALIZATION : 0) |
-                  ((serialization::IsXMLSerializable<T>::value || serialization::IsStringSerializable<T>::value) ? eTLF_OTHER_SERIALIZATION : 0))
+                  ((serialization::IsXMLSerializable<T>::value || serialization::IsStringSerializable<T>::value) && (!(IsStdPair<T>::value || IsStdTuple<T>::value)) ? eTLF_OTHER_SERIALIZATION : 0))
        };
 };
 
@@ -111,7 +113,7 @@ struct tDataTypeInfo<T, 0>
     tTypeInfo data_type_info;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)) // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)) // Type info
   };
 };
 
@@ -127,7 +129,7 @@ struct tDataTypeInfo<T, eTLF_BINARY_OPS>
     tBinaryOperations binary_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value } // Binary operations
   };
 };
@@ -144,7 +146,7 @@ struct tDataTypeInfo<T, eTLF_BINARY_SERIALIZATION>
     tBinarySerializationOperations binary_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
   };
 };
@@ -162,7 +164,7 @@ struct tDataTypeInfo < T, eTLF_BINARY_SERIALIZATION | eTLF_BINARY_OPS >
     tBinarySerializationOperations binary_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
   };
@@ -180,7 +182,7 @@ struct tDataTypeInfo<T, eTLF_OTHER_SERIALIZATION>
     typename std::conditional<serialization::IsStringSerializable<T>::value, tStringSerializationOperations, tXMLSerializationOperations>::type other_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
 };
@@ -198,7 +200,7 @@ struct tDataTypeInfo < T, eTLF_OTHER_SERIALIZATION | eTLF_BINARY_OPS >
     typename std::conditional<serialization::IsStringSerializable<T>::value, tStringSerializationOperations, tXMLSerializationOperations>::type other_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
     { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
@@ -217,7 +219,7 @@ struct tDataTypeInfo < T, eTLF_OTHER_SERIALIZATION | eTLF_BINARY_SERIALIZATION >
     typename std::conditional<serialization::IsStringSerializable<T>::value, tStringSerializationOperations, tXMLSerializationOperations>::type other_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
     { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
@@ -237,7 +239,7 @@ struct tDataTypeInfo < T, eTLF_OTHER_SERIALIZATION | eTLF_BINARY_SERIALIZATION |
     typename std::conditional<serialization::IsStringSerializable<T>::value, tStringSerializationOperations, tXMLSerializationOperations>::type other_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
     { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
@@ -257,7 +259,7 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_BINARY_OPS >
     tBinaryOperationsVector binary_operations_list_2;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Vector binary operations 1
     { rtti::GetVectorElementFunction<T>::value, rtti::GetVectorSizeFunction<T>::value, rtti::ResizeVectorFunction<T>::value } // Vectory binary operations 2
   };
@@ -277,7 +279,7 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_BINARY_SERIALIZATION | eTLF_BI
     tBinarySerializationOperations binary_serialization_operations_list;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Vector binary operations 1
     { rtti::GetVectorElementFunction<T>::value, rtti::GetVectorSizeFunction<T>::value, rtti::ResizeVectorFunction<T>::value }, // Vectory binary operations 2
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
@@ -298,7 +300,7 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_OTHER_SERIALIZATION | eTLF_BIN
     tXMLSerializationOperations xml_serialization_operations_list;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Vector binary operations 1
     { rtti::GetVectorElementFunction<T>::value, rtti::GetVectorSizeFunction<T>::value, rtti::ResizeVectorFunction<T>::value }, // Vectory binary operations 2
     { rtti::DeserializeFromXMLFunction<T>::value, rtti::SerializeToXMLFunction<T>::value } // XML serialization
@@ -320,7 +322,7 @@ struct tDataTypeInfo < T, eTLF_VECTOR_TYPE | eTLF_OTHER_SERIALIZATION | eTLF_BIN
     tXMLSerializationOperations xml_serialization_operations_list;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Vector binary operations 1
     { rtti::GetVectorElementFunction<T>::value, rtti::GetVectorSizeFunction<T>::value, rtti::ResizeVectorFunction<T>::value }, // Vectory binary operations 2
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
@@ -344,12 +346,77 @@ struct tDataTypeInfo<T, eTLF_ENUM>
     typename std::conditional<serialization::IsStringSerializable<T>::value, tStringSerializationOperations, tXMLSerializationOperations>::type other_serialization_operations;
   } static constexpr value =
   {
-    tTypeInfo(typeid(T), TypeTraitsVector<T>::value | trait_flags::cIS_DATA_TYPE, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, std::is_same<tElement, void>::value ? &tTypeInfo::cNULL_TYPE_INFO : &tDataTypeInfo<tElement>::value.data_type_info, &shared_info, sizeof(T)), // Type info
     { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
     { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value }, // Binary serialization
     { std::conditional<serialization::IsStringSerializable<T>::value, rtti::DeserializeFromStringFunction<T>, rtti::DeserializeFromXMLFunction<T>>::type::value, std::conditional<serialization::IsStringSerializable<T>::value, rtti::SerializeToStringFunction<T>, rtti::SerializeToXMLFunction<T>>::type::value } // Other serialization
   };
 };
+
+template <typename T>
+struct tDataTypeInfo<T, eTLF_TUPLE>
+{
+  static tTypeInfo::tSharedInfoTuple shared_info;
+  typedef typename std::conditional<std::is_same<typename UnderlyingType<T>::type, T>::value, void, typename UnderlyingType<T>::type>::type tUnderlying;
+  struct tTable
+  {
+    tTypeInfo data_type_info;
+  } static constexpr value =
+  {
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, &tTypeInfo::cNULL_TYPE_INFO, &shared_info, sizeof(T)) // Type info
+  };
+};
+
+template <typename T>
+struct tDataTypeInfo < T, eTLF_TUPLE | eTLF_BINARY_OPS >
+{
+  static tTypeInfo::tSharedInfoTuple shared_info;
+  typedef typename std::conditional<std::is_same<typename UnderlyingType<T>::type, T>::value, void, typename UnderlyingType<T>::type>::type tUnderlying;
+  struct tTable
+  {
+    tTypeInfo data_type_info;
+    tBinaryOperations binary_operations;
+  } static constexpr value =
+  {
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, &tTypeInfo::cNULL_TYPE_INFO, &shared_info, sizeof(T)), // Type info
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value } // Binary operations
+  };
+};
+
+template <typename T>
+struct tDataTypeInfo < T, eTLF_TUPLE | eTLF_BINARY_SERIALIZATION >
+{
+  static tTypeInfo::tSharedInfoTuple shared_info;
+  typedef typename std::conditional<std::is_same<typename UnderlyingType<T>::type, T>::value, void, typename UnderlyingType<T>::type>::type tUnderlying;
+  struct tTable
+  {
+    tTypeInfo data_type_info;
+    tBinarySerializationOperations binary_serialization_operations;
+  } static constexpr value =
+  {
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, &tTypeInfo::cNULL_TYPE_INFO, &shared_info, sizeof(T)), // Type info
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
+  };
+};
+
+template <typename T>
+struct tDataTypeInfo < T, eTLF_TUPLE | eTLF_BINARY_SERIALIZATION | eTLF_BINARY_OPS >
+{
+  static tTypeInfo::tSharedInfoTuple shared_info;
+  typedef typename std::conditional<std::is_same<typename UnderlyingType<T>::type, T>::value, void, typename UnderlyingType<T>::type>::type tUnderlying;
+  struct tTable
+  {
+    tTypeInfo data_type_info;
+    tBinaryOperations binary_operations;
+    tBinarySerializationOperations binary_serialization_operations;
+  } static constexpr value =
+  {
+    tTypeInfo(typeid(T), TypeTraitsVector<T>::value, std::is_same<void, tUnderlying>::value ? nullptr : &tDataTypeInfo<tUnderlying>::value.data_type_info, &tTypeInfo::cNULL_TYPE_INFO, &shared_info, sizeof(T)), // Type info
+    { rtti::ConstructorFunction<T>::value, rtti::DestructorFunction<T>::value, rtti::DeepCopyFunction<T>::value, EqualsFunction<T>::value }, // Binary operations
+    { rtti::DeserializeFromBinaryFunction<T>::value, rtti::SerializeToBinaryFunction<T>::value } // Binary serialization
+  };
+};
+
 
 enum { cVOID_FLAGS = TableLayoutFlags<void>::value };
 
@@ -385,6 +452,10 @@ template <typename T> constexpr typename tDataTypeInfo<T, 11>::tTable tDataTypeI
 template <typename T> constexpr typename tDataTypeInfo<T, 13>::tTable tDataTypeInfo<T, 13>::value;
 template <typename T> constexpr typename tDataTypeInfo<T, 15>::tTable tDataTypeInfo<T, 15>::value;
 template <typename T> constexpr typename tDataTypeInfo<T, 16>::tTable tDataTypeInfo<T, 16>::value;
+template <typename T> constexpr typename tDataTypeInfo<T, 32>::tTable tDataTypeInfo<T, 32>::value;
+template <typename T> constexpr typename tDataTypeInfo<T, 33>::tTable tDataTypeInfo<T, 33>::value;
+template <typename T> constexpr typename tDataTypeInfo<T, 34>::tTable tDataTypeInfo<T, 34>::value;
+template <typename T> constexpr typename tDataTypeInfo<T, 35>::tTable tDataTypeInfo<T, 35>::value;
 
 template <typename T, unsigned int Tflags> tTypeInfo::tSharedInfo tDataTypeInfo<T, Tflags>::shared_info(&tDataTypeInfo<T>::value.data_type_info, TypeName<T>::value);
 template <typename T> tTypeInfo::tSharedInfo tDataTypeInfo<T, 0>::shared_info(&tDataTypeInfo<T>::value.data_type_info, TypeName<T>::value, AutoRegisterVectorType<T>::value ? &tDataTypeInfo<typename std::conditional<AutoRegisterVectorType<T>::value, std::vector<T>, void>::type>::value.data_type_info : &tTypeInfo::cNULL_TYPE_INFO, AutoRegister<T>::Register());
@@ -407,6 +478,52 @@ tTypeInfo::tSharedInfoEnum tDataTypeInfo<T, eTLF_ENUM>::shared_info(&tDataTypeIn
     &tDataTypeInfo<typename std::conditional<AutoRegisterVectorType<T>::value, std::vector<T>, void>::type>::value.data_type_info,
     AutoRegister<T>::Register());
 
+namespace
+{
+
+template <typename T>
+struct tTupleInfo
+{
+  static_assert(std::is_same<T, void>::value, "This should not be instantiated");
+};
+template <typename T1, typename T2>
+struct tTupleInfo<std::pair<T1, T2>>
+{
+  enum { cTUPLE_SIZE = 2 };
+  static const std::array<tTypeInfo::tTupleElementInfo, 2> cTUPLE_INFO;
+
+  static std::array<tTypeInfo::tTupleElementInfo, 2> Get(const std::pair<T1, T2>* pair)
+  {
+    return { tTypeInfo::tTupleElementInfo(&tDataTypeInfo<typename NormalizedType<T1>::type>::value.data_type_info, reinterpret_cast<const char*>(&pair->first) - reinterpret_cast<const char*>(pair)),
+             tTypeInfo::tTupleElementInfo(&tDataTypeInfo<typename NormalizedType<T2>::type>::value.data_type_info, reinterpret_cast<const char*>(&pair->second) - reinterpret_cast<const char*>(pair))
+           };
+  }
+};
+
+template <typename ... TArgs>
+struct tTupleInfo<std::tuple<TArgs...>>
+{
+  enum { cTUPLE_SIZE = std::tuple_size<std::tuple<TArgs...>>::value };
+  static const std::array<tTypeInfo::tTupleElementInfo, cTUPLE_SIZE> cTUPLE_INFO;
+  typedef std::tuple<TArgs...> tTuple;
+
+  template <int ... SEQUENCE>
+  static std::array<tTypeInfo::tTupleElementInfo, cTUPLE_SIZE> Get(const tTuple* tuple, rrlib::util::tIntegerSequence<SEQUENCE...> sequence)
+  {
+    std::array<tTypeInfo::tTupleElementInfo, cTUPLE_SIZE> result = { tTypeInfo::tTupleElementInfo(&tDataTypeInfo<typename NormalizedType<typename std::tuple_element<SEQUENCE, tTuple>::type>::type>::value.data_type_info, reinterpret_cast<const char*>(&std::get<SEQUENCE>(*tuple)) - reinterpret_cast<const char*>(tuple)) ... };
+    return result;
+  }
+};
+
+template <typename T1, typename T2> const std::array<tTypeInfo::tTupleElementInfo, 2> tTupleInfo<std::pair<T1, T2>>::cTUPLE_INFO = tTupleInfo<std::pair<T1, T2>>::Get(static_cast<std::pair<T1, T2>*>(nullptr));
+template <typename ... TArgs> const std::array<tTypeInfo::tTupleElementInfo, tTupleInfo<std::tuple<TArgs...>>::cTUPLE_SIZE> tTupleInfo<std::tuple<TArgs...>>::cTUPLE_INFO = tTupleInfo<std::tuple<TArgs...>>::Get(static_cast<std::tuple<TArgs...>*>(nullptr), typename rrlib::util::tIntegerSequenceGenerator<tTupleInfo<std::tuple<TArgs...>>::cTUPLE_SIZE>::type());
+
+}
+
+template <typename T> tTypeInfo::tSharedInfoTuple tDataTypeInfo<T, 32>::shared_info(&tDataTypeInfo<T, 32>::value.data_type_info, tTupleInfo<T>::cTUPLE_SIZE, tTupleInfo<T>::cTUPLE_INFO.data(), AutoRegisterVectorType<T>::value ? &tDataTypeInfo<typename std::conditional<AutoRegisterVectorType<T>::value, std::vector<T>, void>::type>::value.data_type_info : &tTypeInfo::cNULL_TYPE_INFO, AutoRegister<T>::Register());
+template <typename T> tTypeInfo::tSharedInfoTuple tDataTypeInfo<T, 33>::shared_info(&tDataTypeInfo<T, 33>::value.data_type_info, tTupleInfo<T>::cTUPLE_SIZE, tTupleInfo<T>::cTUPLE_INFO.data(), AutoRegisterVectorType<T>::value ? &tDataTypeInfo<typename std::conditional<AutoRegisterVectorType<T>::value, std::vector<T>, void>::type>::value.data_type_info : &tTypeInfo::cNULL_TYPE_INFO, AutoRegister<T>::Register());
+template <typename T> tTypeInfo::tSharedInfoTuple tDataTypeInfo<T, 34>::shared_info(&tDataTypeInfo<T, 34>::value.data_type_info, tTupleInfo<T>::cTUPLE_SIZE, tTupleInfo<T>::cTUPLE_INFO.data(), AutoRegisterVectorType<T>::value ? &tDataTypeInfo<typename std::conditional<AutoRegisterVectorType<T>::value, std::vector<T>, void>::type>::value.data_type_info : &tTypeInfo::cNULL_TYPE_INFO, AutoRegister<T>::Register());
+template <typename T> tTypeInfo::tSharedInfoTuple tDataTypeInfo<T, 35>::shared_info(&tDataTypeInfo<T, 35>::value.data_type_info, tTupleInfo<T>::cTUPLE_SIZE, tTupleInfo<T>::cTUPLE_INFO.data(), AutoRegisterVectorType<T>::value ? &tDataTypeInfo<typename std::conditional<AutoRegisterVectorType<T>::value, std::vector<T>, void>::type>::value.data_type_info : &tTypeInfo::cNULL_TYPE_INFO, AutoRegister<T>::Register());
 
 template <typename T>
 struct ConstructorFunction<T, false, false, true>

@@ -69,7 +69,7 @@ namespace detail
 //----------------------------------------------------------------------
 
 static tTypeInfo::tSharedInfo cNULL_TYPE_SHARED_INFO(nullptr);
-const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY, &cNULL_TYPE_INFO, &cNULL_TYPE_INFO, &cNULL_TYPE_SHARED_INFO, 0 };
+const tTypeInfo tTypeInfo::cNULL_TYPE_INFO = { typeid(std::nullptr_t), trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY | static_cast<uint>(tTypeClassification::NULL_TYPE), &cNULL_TYPE_INFO, &cNULL_TYPE_INFO, &cNULL_TYPE_SHARED_INFO, 0 };
 
 //----------------------------------------------------------------------
 // Implementation
@@ -226,12 +226,26 @@ const tType tTypeInfo::FindType(const std::string& name)
     }
     return tType();
   }
+  static tInternalData& internal_data = GetInternalData();
+  if (util::EndsWith(name, ">"))
+  {
+    tTypeClassification classification = util::StartsWith(name, "Pair<") ? tTypeClassification::PAIR : (util::StartsWith(name, "Tuple<") ? tTypeClassification::TUPLE : (util::StartsWith(name, "EnumFlags<") ? tTypeClassification::ENUM_BASED_FLAGS : tTypeClassification::OTHER_DATA_TYPE));
+    if (classification != tTypeClassification::OTHER_DATA_TYPE)
+    {
+      for (const tType & type : internal_data.types)
+      {
+        if (type.GetTypeClassification() == classification && type.HasName(name))
+        {
+          return type;
+        }
+      }
+    }
+  }
 
   // main names
-  static tInternalData& internal_data = GetInternalData();
   for (const tType & type : internal_data.types)
   {
-    if ((!type.IsListType()) && (!type.IsArray()) && name == type.info->shared_info->name)
+    if (type.GetTypeClassification() > tTypeClassification::AUTO_NAMED && name == type.info->shared_info->name)
     {
       return type;
     }
@@ -265,7 +279,7 @@ const tType tTypeInfo::FindType(const std::string& name)
       buffer[0] = '.';
       memcpy(&buffer[1], name.c_str(), name.length());
       buffer[name.length() + 1] = 0;
-      if ((!type.IsListType()) && (!type.IsArray()) && rrlib::util::EndsWith(type.info->shared_info->name, buffer))
+      if (type.GetTypeClassification() > tTypeClassification::AUTO_NAMED && rrlib::util::EndsWith(type.info->shared_info->name, buffer))
       {
         return type;
       }
@@ -317,7 +331,7 @@ util::tManagedConstCharPointer tTypeInfo::GetTypeNameDefinedInRRLibRtti(const tT
 
 util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
 {
-  if (type.IsListType() || type.IsArray())
+  if (type.GetTypeClassification() <= tTypeClassification::AUTO_NAMED)
   {
     return util::tManagedConstCharPointer();
   }
@@ -397,7 +411,7 @@ util::tManagedConstCharPointer tTypeInfo::GetDefaultTypeName(const tType& type)
   return util::tManagedConstCharPointer(name, true);
 }
 
-bool tTypeInfo::HasName(const std::string& name) const
+bool tTypeInfo::HasName(const tStringRange& name) const
 {
   tInternalData& internal_data = GetInternalData();
   if (!shared_info)
@@ -405,27 +419,100 @@ bool tTypeInfo::HasName(const std::string& name) const
     return false;
   }
   tType this_type(this);
-  if (IsListType())
+  tTypeClassification classification = this_type.GetTypeClassification();
+  if (classification <= tTypeClassification::AUTO_NAMED)
   {
-    // TODO: this can be optimized
-    return util::StartsWith(name, "List<") && util::EndsWith(name, ">") && tType(element_type).HasName(name.substr(5, name.length() - 6));
+    std::string name_string(name.Begin(), name.End() - name.Begin());
+    if (classification == tTypeClassification::LIST)
+    {
+      // TODO: this can be optimized
+      if (util::StartsWith(name_string, "List<") && util::EndsWith(name_string, ">") && element_type->HasName(tStringRange(name.begin() + 5, name.end() - 1)))
+      {
+        return true;
+      }
+    }
+    else if (classification == tTypeClassification::ARRAY)
+    {
+      // TODO: this can be optimized
+      std::string postfix = ", " + std::to_string(this_type.GetArraySize()) + ">";
+      if (util::StartsWith(name_string, "Array<") && util::EndsWith(name_string, postfix) && element_type->HasName(tStringRange(name.begin() + 6, name.end() - postfix.length())))
+      {
+        return true;
+      }
+    }
+    else if (classification == tTypeClassification::ENUM_BASED_FLAGS)
+    {
+      // TODO: this can be optimized
+      if (util::StartsWith(name_string, "EnumFlags<") && util::EndsWith(name_string, ">") && element_type->HasName(tStringRange(name.begin() + 10, name.end() - 1)))
+      {
+        return true;
+      }
+    }
+    else if (util::EndsWith(name_string, ">") && ((classification == tTypeClassification::PAIR && util::StartsWith(name_string, "Pair<")) || (classification == tTypeClassification::TUPLE && util::StartsWith(name_string, "Tuple<"))))
+    {
+      std::vector<tStringRange> types;
+      auto tuple_types = this_type.GetTupleTypes();
+      types.reserve(tuple_types.second);
+      uint prefix_length = classification == tTypeClassification::PAIR ? 5 : 6;
+      int bracket_depth = 0;
+      const char* start = name.begin() + prefix_length;
+      for (auto it = name.begin() + prefix_length; it < name.end(); ++it)
+      {
+        if ((*it) == '<')
+        {
+          bracket_depth++;
+        }
+        else if ((*it) == '>' && bracket_depth)
+        {
+          bracket_depth--;
+        }
+        else if ((*it) == '>' || ((*it) == ',' && bracket_depth == 0))
+        {
+          while (std::isspace(*start))
+          {
+            start++;
+          }
+          while (std::isspace(*(it - 1)))
+          {
+            it--;
+          }
+          if (start < it)
+          {
+            types.emplace_back(start, it);
+            start = it + 1;
+          }
+        }
+      }
+
+      if (tuple_types.second == types.size())
+      {
+        bool all_match = true;
+        for (size_t i = 0; i < types.size(); i++)
+        {
+          all_match &= tuple_types.first[i].type_info->HasName(types[i]);
+        }
+        if (all_match)
+        {
+          return true;
+        }
+      }
+    }
   }
-  else if (this_type.IsArray())
+  else
   {
-    // TODO: this can be optimized
-    std::string postfix = ", " + std::to_string(this_type.GetArraySize()) + ">";
-    return util::StartsWith(name, "Array<") && util::EndsWith(name, postfix) && tType(element_type).HasName(name.substr(6, name.length() - (6 + postfix.length())));
-  }
-  if (name == shared_info->name)
-  {
-    return true;
+    size_t length = name.End() - name.Begin();
+    if (length == strlen(shared_info->name) && memcmp(name.Begin(), shared_info->name, length) == 0)
+    {
+      return true;
+    }
   }
 
   {
     std::unique_lock<std::recursive_mutex> lock(internal_data.mutex);
-    tInternalData::tNameLookupEntry entry(util::tManagedConstCharPointer(name.c_str(), false), nullptr);
+    std::string name_string(name.Begin(), name.End() - name.Begin());
+    tInternalData::tNameLookupEntry entry(util::tManagedConstCharPointer(name_string.c_str(), false), nullptr);
     auto it = std::lower_bound(internal_data.name_lookup.begin(), internal_data.name_lookup.end(), entry);
-    return it != internal_data.name_lookup.end() && it->first.Get() == name && it->second == this;
+    return it != internal_data.name_lookup.end() && it->first.Get() == name_string && it->second == this;
   }
 }
 
@@ -474,7 +561,7 @@ tTypeInfo::tSharedInfo::tSharedInfo(const tTypeInfo* type_info, util::tManagedCo
     internal_data.copied_strings.emplace_back(std::move(name));
   }
 
-  if (non_standard_name && (type_info->type_traits & trait_flags::cIS_DATA_TYPE))
+  if (non_standard_name && (tType(type_info).GetTypeClassification() != tTypeClassification::RPC_TYPE))
   {
     tInternalData::tRenamingEntry entry(util::tManagedConstCharPointer(util::Demangle(type_info->std_type_info.name()).c_str(), true), this->name);
     if (strcmp(entry.first.Get(), entry.second) != 0)
@@ -614,7 +701,14 @@ tTypeInfo::tSharedInfoEnum::tSharedInfoEnum(const tTypeInfo* type_info, tGetType
   this->Register(type_info);
 }
 
-
+tTypeInfo::tSharedInfoTuple::tSharedInfoTuple(const tTypeInfo* type_info, uint tuple_size, const tTupleElementInfo* elements, const tTypeInfo* list_type, int auto_registered) :
+  tSharedInfo(type_info, TypeName<void>::value, list_type, auto_registered, false),
+  tuple_size(tuple_size),
+  elements(elements)
+{
+  // register types now
+  this->Register(type_info);
+}
 
 //----------------------------------------------------------------------
 // End of namespace declaration

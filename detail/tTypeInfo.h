@@ -42,6 +42,7 @@
 #include <vector>
 #include <string>
 #include "rrlib/serialization/tRegister.h"
+#include "rrlib/util/tIteratorRange.h"
 
 //----------------------------------------------------------------------
 // Internal includes with ""
@@ -74,6 +75,7 @@ namespace detail
 typedef util::tManagedConstCharPointer(*tGetTypenameFunction)(const tType& type);
 typedef std::vector<util::tManagedConstCharPointer>(*tGetTypenamesFunction)(const tType& type);
 
+typedef util::tIteratorRange<const char*> tStringRange;
 
 //----------------------------------------------------------------------
 // Class declaration
@@ -182,6 +184,36 @@ struct tTypeInfo
     const make_builder::internal::tEnumStrings& enum_strings;
   };
 
+  /*!
+   * Info on tuple element
+   */
+  struct tTupleElementInfo
+  {
+    const tTypeInfo* type_info;  // Type of tuple element
+    size_t offset;               // Offset of element in tuple
+
+    constexpr tTupleElementInfo(const tTypeInfo* type_info, size_t offset) : type_info(type_info), offset(offset)
+    {}
+  };
+
+  class tSharedInfoTuple : public tSharedInfo
+  {
+  public:
+
+    /*!
+     * \param type_info Type info of plain type
+     * \param tuple_size Tuple size (number of elements in tuple)
+     * \param elements Pointer to first element in tTupleElementInfo* array to tuple's elements
+     * \param list_type Unused parameter (used to auto-register list types)
+     * \param auto_registered Unused parameter (used for additional auto-registration)
+     */
+    tSharedInfoTuple(const tTypeInfo* type_info, uint tuple_size, const tTupleElementInfo* elements, const tTypeInfo* list_type, int auto_registered);
+
+    const uint tuple_size;
+    const tTupleElementInfo* elements;
+  };
+
+
   /*! Type info for null/empty type */
   static const tTypeInfo cNULL_TYPE_INFO;
 
@@ -262,19 +294,19 @@ struct tTypeInfo
   static util::tManagedConstCharPointer GetTypeNameDefinedInRRLibRtti(const tType& type);
 
   /*!
-   * (note: this is significantly more efficient than calling FindType(name))
+   * (note: this is more efficient than calling FindType(name))
    *
    * \param name Name to check
    * \return Whether any of this type's names equals 'name'
    */
-  bool HasName(const std::string& name) const;
+  bool HasName(const tStringRange& name) const;
 
   /*!
    * \return Is this a list type? (std::vector<T> of some type T)
    */
   inline bool IsListType() const
   {
-    return (type_traits & cLIST_TRAIT_FLAGS) == cLIST_TRAIT_FLAGS;
+    return (type_traits & (0xF << 12)) == (9 << 12);
   }
 };
 

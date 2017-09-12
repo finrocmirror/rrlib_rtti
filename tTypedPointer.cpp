@@ -83,7 +83,24 @@ void tTypedPointer::Deserialize(const xml::tNode& node) const
   if (data && (type.GetTypeTraits() & trait_flags::cIS_XML_SERIALIZABLE))
   {
 #ifdef _LIB_RRLIB_XML_PRESENT_
-    if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
+    auto classification = type.GetTypeClassification();
+    bool pair = type.GetTypeClassification() == tTypeClassification::PAIR;;
+    if (pair || classification == tTypeClassification::TUPLE)
+    {
+      auto tuple_elements = type.GetTupleTypes();
+      auto it = node.ChildrenBegin();
+      for (size_t i = 0; i < tuple_elements.second; i++, ++it)
+      {
+        if (it == node.ChildrenEnd())
+        {
+          throw std::runtime_error("Not enough XML siblings to de-serialize std::tuple of size " + std::to_string(tuple_elements.second) + " completely!");
+        }
+        const rrlib::xml::tNode& node = *it;
+        tTypedPointer pointer(static_cast<char*>(data) + tuple_elements.first[i].offset, tType(tuple_elements.first[i].type_info));
+        pointer.Deserialize(node);
+      }
+    }
+    else if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
     {
       serialization::tStringInputStream stream(node.GetTextContent());
       Deserialize(stream);
@@ -141,7 +158,19 @@ void tTypedConstPointer::Serialize(xml::tNode& node) const
   if (data && (type.GetTypeTraits() & trait_flags::cIS_XML_SERIALIZABLE))
   {
 #ifdef _LIB_RRLIB_XML_PRESENT_
-    if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
+    auto classification = type.GetTypeClassification();
+    bool pair = type.GetTypeClassification() == tTypeClassification::PAIR;;
+    if (pair || classification == tTypeClassification::TUPLE)
+    {
+      auto tuple_elements = type.GetTupleTypes();
+      for (size_t i = 0; i < tuple_elements.second; i++)
+      {
+        rrlib::xml::tNode &child = node.AddChildNode(pair ? (i == 0 ? "first" : "second") : "tuple_element");
+        tTypedConstPointer pointer(static_cast<const char*>(data) + tuple_elements.first[i].offset, tType(tuple_elements.first[i].type_info));
+        pointer.Serialize(child);
+      }
+    }
+    else if (type.GetTypeTraits() & trait_flags::cIS_STRING_SERIALIZABLE)
     {
       serialization::tStringOutputStream stream;
       Serialize(stream);

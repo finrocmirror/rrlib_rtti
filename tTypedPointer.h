@@ -85,7 +85,7 @@ public:
   tTypedConstPointer() : data(nullptr), type() {}
   tTypedConstPointer(const void* pointer, const tType& type) : data(pointer), type(type)
   {
-    assert((pointer == nullptr || (type.GetTypeTraits() & trait_flags::cIS_DATA_TYPE)) && "Only data types are valid");
+    assert((pointer == nullptr || (type.GetTypeClassification() != tTypeClassification::RPC_TYPE)) && "Only data types are valid");
   }
   template <typename T>
   explicit tTypedConstPointer(const T* object) : data(object), type(tDataType<T>())
@@ -271,7 +271,7 @@ public:
   tTypedPointer() : data(nullptr), type() {}
   tTypedPointer(void* pointer, const tType& type) : data(pointer), type(type)
   {
-    assert((pointer == nullptr || (type.GetTypeTraits() & trait_flags::cIS_DATA_TYPE)) && "Only data types are valid");
+    assert((pointer == nullptr || (type.GetTypeTraits() & trait_flags::cTYPE_CLASSIFICATION_BITS) != static_cast<uint>(tTypeClassification::RPC_TYPE)) && "Only data types are valid");
   }
   template <typename T>
   explicit tTypedPointer(T* object) : data(object), type(tDataType<T>())

@@ -66,11 +66,93 @@ namespace rtti
 // Implementation
 //----------------------------------------------------------------------
 
+namespace
+{
+
+template <typename T>
+inline void StreamChars(std::ostream& stream, const T chars)
+{
+  stream << chars;
+}
+
+template <size_t Tchars>
+inline void StreamChars(serialization::tOutputStream& stream, const char(&chars)[Tchars])
+{
+  stream.Write(chars, Tchars - 1);
+}
+inline void StreamChars(serialization::tOutputStream& stream, const char* chars)
+{
+  stream.Write(chars, strlen(chars));
+}
+inline void StreamChars(serialization::tOutputStream& stream, char c)
+{
+  stream.WriteByte(c);
+}
+
+template <typename TStream>
+void StreamType(TStream& stream, const tType& type)
+{
+  switch (type.GetTypeClassification())
+  {
+  case tTypeClassification::RPC_TYPE:
+  case tTypeClassification::OTHER_DATA_TYPE:
+  case tTypeClassification::INTEGRAL:
+  case tTypeClassification::NULL_TYPE:
+    StreamChars(stream, type.GetPlainTypeName());
+    break;
+  case tTypeClassification::ARRAY:
+    StreamChars(stream, "Array<");
+    StreamType(stream, type.GetElementType());
+    StreamChars(stream, ", ");
+    char buffer[100];
+    sprintf(buffer, "%d", type.GetArraySize());
+    StreamChars(stream, buffer);
+    StreamChars(stream, '>');
+    break;
+  case tTypeClassification::LIST:
+    StreamChars(stream, "List<");
+    StreamType(stream, type.GetElementType());
+    StreamChars(stream, '>');
+    break;
+  case tTypeClassification::ENUM_BASED_FLAGS:
+    StreamChars(stream, "EnumFlags<");
+    StreamType(stream, type.GetElementType());
+    StreamChars(stream, '>');
+    break;
+  case tTypeClassification::PAIR:
+  {
+    std::pair<const detail::tTypeInfo::tTupleElementInfo*, size_t> tuple_types = type.GetTupleTypes();
+    assert(tuple_types.second == 2);
+    StreamChars(stream, "Pair<");
+    StreamType(stream, tType(tuple_types.first[0].type_info));
+    StreamChars(stream, ", ");
+    StreamType(stream, tType(tuple_types.first[1].type_info));
+    StreamChars(stream, '>');
+    break;
+  }
+  case tTypeClassification::TUPLE:
+  {
+    std::pair<const detail::tTypeInfo::tTupleElementInfo*, size_t> tuple_types = type.GetTupleTypes();
+    StreamChars(stream, "Tuple<");
+    for (size_t i = 0; i < tuple_types.second; i++)
+    {
+      StreamType(stream, tType(tuple_types.first[i].type_info));
+      StreamChars(stream, i == tuple_types.second - 1 ? ">" : ", ");
+    }
+    break;
+  }
+  default:
+    break;
+  }
+}
+
+}
+
 tType tType::GetListType() const
 {
   for (const tType & type : GetTypeRegister())
   {
-    if ((type.GetTypeTraits() & trait_flags::cIS_LIST_TYPE) && type.GetElementType() == *this)
+    if (type.IsListType() && type.GetElementType() == *this)
     {
       return tType(type.info);
     }
@@ -80,34 +162,30 @@ tType tType::GetListType() const
 
 std::string tType::GetName() const
 {
-  if (IsListType())
+  if (GetTypeClassification() <= tTypeClassification::AUTO_NAMED)
   {
     std::stringstream stream;
-    stream << "List<" << GetElementType().GetName() << '>';
+    StreamType(stream, *this);
     return stream.str();
   }
-  else if (IsArray())
+  else
   {
-    std::stringstream stream;
-    stream << "Array<" << GetElementType().GetName() << ", " << GetArraySize() << '>';
-    return stream.str();
+    return GetSharedInfo().name;
   }
-  return GetSharedInfo().name;
 }
 
+std::ostream& operator << (std::ostream& stream, const tType& type)
+{
+  StreamType(stream, type);
+  return stream;
+}
 
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& type)
 {
   if (tType::GetTypeRegister().WriteEntry(stream, type.GetHandle()))
   {
-    if (type.IsListType() || type.IsArray())
-    {
-      stream << type.GetName();
-    }
-    else
-    {
-      stream << type.GetPlainTypeName();
-    }
+    StreamType(stream, type);
+    stream.WriteByte(0);
   }
   return stream;
 }
@@ -123,14 +201,7 @@ serialization::tInputStream& operator >> (serialization::tInputStream& stream, t
 
 serialization::tStringOutputStream& operator << (serialization::tStringOutputStream& stream, const tType& type)
 {
-  if (type.IsListType() || type.IsArray())
-  {
-    stream << type.GetName();
-  }
-  else
-  {
-    stream << type.GetPlainTypeName();
-  }
+  StreamType(stream.GetWrappedStringStream(), type);
   return stream;
 }
 

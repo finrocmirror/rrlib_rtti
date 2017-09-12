@@ -64,6 +64,24 @@ class tDataType;
 typedef util::tManagedConstCharPointer(*tGetTypenameFunction)(const tType& type);
 typedef std::vector<util::tManagedConstCharPointer>(*tGetTypenamesFunction)(const tType& type);
 
+/** Enum for classifying types */
+enum class tTypeClassification
+{
+  // Types with generated names
+  ARRAY = 0 << 12,
+  LIST = 1 << 12,
+  PAIR = 2 << 12,
+  TUPLE = 3 << 12,
+  ENUM_BASED_FLAGS = 4 << 12,
+  AUTO_NAMED = ENUM_BASED_FLAGS,
+
+  // Types with fixed names
+  INTEGRAL = 12 << 12,
+  OTHER_DATA_TYPE = 13 << 12,
+  NULL_TYPE = 14 << 12,
+  RPC_TYPE = 15 << 12,
+};
+
 //----------------------------------------------------------------------
 // Function declarations
 //----------------------------------------------------------------------
@@ -159,6 +177,25 @@ struct UnderlyingType<rrlib::util::tEnumBasedFlags<TFlag, TStorage>>
   enum { cOTHER_SERIALIZATION_DIFFERS = true };
 };
 
+template <typename T1, typename T2>
+struct UnderlyingType<std::pair<T1, T2>>
+{
+  typedef std::pair<typename UnderlyingType<T1>::type, typename UnderlyingType<T2>::type> type;
+  enum { cREVERSE_CAST_VALID = UnderlyingType<T1>::cREVERSE_CAST_VALID && UnderlyingType<T2>::cREVERSE_CAST_VALID };
+  enum { cBINARY_SERIALIZATION_DIFFERS = UnderlyingType<T1>::cBINARY_SERIALIZATION_DIFFERS || UnderlyingType<T2>::cBINARY_SERIALIZATION_DIFFERS };
+  enum { cOTHER_SERIALIZATION_DIFFERS = UnderlyingType<T1>::cOTHER_SERIALIZATION_DIFFERS || UnderlyingType<T2>::cOTHER_SERIALIZATION_DIFFERS };
+};
+
+template <typename ... TArgs>
+struct UnderlyingType<std::tuple<TArgs ...>>
+{
+  typedef std::tuple<typename UnderlyingType<TArgs>::type...> type;
+  enum { cREVERSE_CAST_VALID = std::is_same < util::tIntegerSequence<UnderlyingType<TArgs>::cREVERSE_CAST_VALID...>, util::tIntegerSequence < true || UnderlyingType<TArgs>::cREVERSE_CAST_VALID... >>::value };
+  enum { cBINARY_SERIALIZATION_DIFFERS = !std::is_same < util::tIntegerSequence<UnderlyingType<TArgs>::cBINARY_SERIALIZATION_DIFFERS...>, util::tIntegerSequence < false && UnderlyingType<TArgs>::cBINARY_SERIALIZATION_DIFFERS... >>::value };
+  enum { cOTHER_SERIALIZATION_DIFFERS = !std::is_same < util::tIntegerSequence<UnderlyingType<TArgs>::cOTHER_SERIALIZATION_DIFFERS...>, util::tIntegerSequence < false && UnderlyingType<TArgs>::cOTHER_SERIALIZATION_DIFFERS... >>::value };
+};
+
+
 
 /*!
  * Type trait that defines whether an object of type T can be safely deep-copied
@@ -173,18 +210,23 @@ struct SupportsBitwiseCopy
   enum { value = (std::is_trivially_destructible<T>::value && (!std::has_virtual_destructor<T>::value) && (!std::is_polymorphic<T>::value)) ||
                  std::conditional < !std::is_same<typename UnderlyingType<T>::type, T>::value, SupportsBitwiseCopy<typename UnderlyingType<T>::type>, std::false_type >::type::value
        };
-
 };
-
-/*!
- * Type trait that determines whether std::vector<T> is automatically registered
- * when a data type T is registered.
- */
-template <typename T>
-struct AutoRegisterVectorType
+template <typename T, size_t N>
+struct SupportsBitwiseCopy<std::array<T, N>>
 {
-  enum { value = (!serialization::IsSerializableContainer<T>::value) && (std::is_move_constructible<T>::value || std::is_copy_constructible<T>::value || std::is_move_assignable<T>::value || std::is_copy_assignable<T>::value) };
+  enum { value = SupportsBitwiseCopy<T>::value };
 };
+template <typename T1, typename T2>
+struct SupportsBitwiseCopy<std::pair<T1, T2>>
+{
+  enum { value = SupportsBitwiseCopy<T1>::value && SupportsBitwiseCopy<T2>::value };
+};
+template <typename ... TArgs>
+struct SupportsBitwiseCopy<std::tuple<TArgs ...>>
+{
+  enum { value = std::is_same < util::tIntegerSequence<SupportsBitwiseCopy<TArgs>::value...>, util::tIntegerSequence < true || SupportsBitwiseCopy<TArgs>::value... >>::value };
+};
+
 
 /*!
  * Type trait that defines whether an object of default-constructing an object of type T is equivalent
@@ -197,6 +239,22 @@ struct IsDefaultConstructionZeroMemory
 {
   enum { value = SupportsBitwiseCopy<T>::value && (!std::is_enum<T>::value) };
 };
+template <typename T, size_t N>
+struct IsDefaultConstructionZeroMemory<std::array<T, N>>
+{
+  enum { value = IsDefaultConstructionZeroMemory<T>::value };
+};
+template <typename T1, typename T2>
+struct IsDefaultConstructionZeroMemory<std::pair<T1, T2>>
+{
+  enum { value = IsDefaultConstructionZeroMemory<T1>::value && IsDefaultConstructionZeroMemory<T2>::value };
+};
+template <typename ... TArgs>
+struct IsDefaultConstructionZeroMemory<std::tuple<TArgs ...>>
+{
+  enum { value = std::is_same < util::tIntegerSequence<IsDefaultConstructionZeroMemory<TArgs>::value...>, util::tIntegerSequence < true || IsDefaultConstructionZeroMemory<TArgs>::value... >>::value };
+};
+
 
 /*!
  * Type trait that defines the rrlib_rtti name of a type.
@@ -241,9 +299,69 @@ struct IsStdVector<std::vector<T>>
   enum { value = true };
 };
 
+/*! Type trait that returns whether type T is a std::array */
 template <typename T>
 using IsStdArray = serialization::IsStdArray<T>;
 
+/*! Type trait that returns whether type T is an EnumBaseFlags type */
+template <typename T>
+struct IsEnumBasedFlags
+{
+  enum { value = false };
+};
+template <typename TFlag, typename TStorage>
+struct IsEnumBasedFlags<rrlib::util::tEnumBasedFlags<TFlag, TStorage>>
+{
+  enum { value = true };
+};
+
+/*! Type trait that returns whether type T is a std::pair */
+template <typename T>
+struct IsStdPair
+{
+  enum { value = false };
+};
+template <typename T1, typename T2>
+struct IsStdPair<std::pair<T1, T2>>
+{
+  enum { value = true };
+};
+
+/*! Type trait that returns whether type T is a std::tuple */
+template <typename T>
+struct IsStdTuple
+{
+  enum { value = false };
+};
+template <typename ... TArgs>
+struct IsStdTuple<std::tuple<TArgs ...>>
+{
+  enum { value = true };
+};
+
+
+/*! Trait to obtain type classifcation for type T */
+template <typename T>
+struct TypeClassification
+{
+  static const tTypeClassification value = IsStdArray<T>::value ? tTypeClassification::ARRAY :
+      (IsStdVector<T>::value ? tTypeClassification::LIST :
+       (IsStdPair<T>::value ? tTypeClassification::PAIR :
+        (IsStdTuple<T>::value ? tTypeClassification::TUPLE :
+         (std::is_integral<T>::value ? tTypeClassification::INTEGRAL :
+          (IsEnumBasedFlags<T>::value ? tTypeClassification::ENUM_BASED_FLAGS :
+           tTypeClassification::OTHER_DATA_TYPE)))));
+};
+
+/*!
+ * Type trait that determines whether std::vector<T> is automatically registered
+ * when a data type T is registered.
+ */
+template <typename T>
+struct AutoRegisterVectorType
+{
+  enum { value = (!serialization::IsSerializableContainer<T>::value) && (!IsStdTuple<T>::value) && (std::is_move_constructible<T>::value || std::is_copy_constructible<T>::value || std::is_move_assignable<T>::value || std::is_copy_assignable<T>::value) };
+};
 
 namespace trait_flags
 {
@@ -257,39 +375,20 @@ static const int cIS_BINARY_SERIALIZABLE = 1 << 8;
 static const int cIS_STRING_SERIALIZABLE = 1 << 9;
 static const int cIS_XML_SERIALIZABLE = 1 << 10;
 static const int cIS_ENUM = 1 << 11;
-static const int cIS_DATA_TYPE = 1 << 12;
-static const int cIS_RPC_TYPE = 1 << 13;
-static const int cIS_ARRAY = 1 << 14;
 
-static const int cHAS_UNDERLYING_TYPE = 1 << 15;
-static const int cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 16;
-static const int cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID = 1 << 17;
-static const int cIS_CAST_FROM_UNDERLYING_TYPE_IMPLICIT = 1 << 18;
-static const int cIS_UNDERLYING_TYPE_BINARY_SERIALIZATION_DIFFERENT = 1 << 19;
-static const int cSUPPORTS_BITWISE_COPY = 1 << 20;
-//static const int cHAS_DIFFERENT_BINARY_SERIALIZATION_THAN_UNDERLYING_TYPE = 1 << 20;
+static const int cTYPE_CLASSIFICATION_BITS = 0xF << 12;
 
-static const int cIS_INTEGRAL = 1 << 21;
-static const int cIS_LIST_TYPE_COPY = 1 << 22;  // copy of first flag (so that this info is also transferred to connection partners)
-static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 23;
+static const int cHAS_UNDERLYING_TYPE = 1 << 16;
+static const int cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT = 1 << 17;
+static const int cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID = 1 << 18;
+static const int cIS_CAST_FROM_UNDERLYING_TYPE_IMPLICIT = 1 << 19;
+static const int cIS_UNDERLYING_TYPE_BINARY_SERIALIZATION_DIFFERENT = 1 << 20;
+static const int cSUPPORTS_BITWISE_COPY = 1 << 21;
+
+static const int cHAS_TRIVIAL_DESTRUCTOR = 1 << 22;
 
 static const int cHAS_VIRTUAL_DESTRUCTOR = 1 << 24;
 static const int cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY = 1 << 25;
-/*static const int cIS_SIGNED = 1 << 23;
-
-static const int cIS_ABSTRACT = 1 << 16;
-static const int cIS_ARITHMETIC = 1 << 17;
-static const int cIS_ARRAY = 1 << 18;
-static const int cIS_CLASS = 1 << 19;
-static const int cIS_EMPTY = 1 << 20;
-static const int cIS_FLOATING_POINT = 1 << 21;
-static const int cIS_OBJECT = 1 << 23;
-static const int cIS_POD = 1 << 24;
-static const int cIS_POINTER = 1 << 25;
-static const int cIS_SCALAR = 1 << 26;
-static const int cIS_UNSIGNED = 1 << 28;*/
-
-static_assert((cIS_LIST_TYPE | cIS_DATA_TYPE) == detail::tTypeInfo::cLIST_TRAIT_FLAGS, "Flag inconsistency");
 
 } // namespace
 
@@ -309,7 +408,7 @@ struct TypeTraitsVector
 
   // Bit vector for type (the remaining flags are set in the code)
   static const uint32_t value =
-    (IsStdVector<T>::value ? (trait_flags::cIS_LIST_TYPE | trait_flags::cIS_LIST_TYPE_COPY) : 0) |
+    (IsStdVector<T>::value ? (trait_flags::cIS_LIST_TYPE) : 0) |
     cSERIALIZATION_FUNCTION_OFFSET | // offset
 
     (serialization::IsBinarySerializable<T>::value ? trait_flags::cIS_BINARY_SERIALIZABLE : 0) |
@@ -317,7 +416,8 @@ struct TypeTraitsVector
     (serialization::IsXMLSerializable<T>::value ? trait_flags::cIS_XML_SERIALIZABLE : 0) |
 
     (std::is_enum<T>::value ? trait_flags::cIS_ENUM : 0) |
-    (IsStdArray<T>::value ? trait_flags::cIS_ARRAY : 0) |
+    static_cast<uint>(TypeClassification<T>::value) |
+
     (cHAS_DIFFERENT_UNDERLYING_TYPE ? trait_flags::cHAS_UNDERLYING_TYPE : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE && IsImplicitlyConvertible<T, typename UnderlyingType<T>::type>::value ? trait_flags::cIS_CAST_TO_UNDERLYING_TYPE_IMPLICIT : 0) |
     (cHAS_DIFFERENT_UNDERLYING_TYPE && UnderlyingType<T>::cREVERSE_CAST_VALID ? trait_flags::cIS_REINTERPRET_CAST_FROM_UNDERLYING_TYPE_VALID : 0) |
@@ -327,23 +427,7 @@ struct TypeTraitsVector
 
     (std::has_virtual_destructor<T>::value ? trait_flags::cHAS_VIRTUAL_DESTRUCTOR : 0) |
     (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |
-    (IsDefaultConstructionZeroMemory<T>::value ? trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY : 0) |
-    (std::is_integral<T>::value ? trait_flags::cIS_INTEGRAL : 0)
-
-    /*(std::is_abstract<T>::value ? trait_flags::cIS_ABSTRACT : 0) |
-    (std::is_arithmetic<T>::value ? trait_flags::cIS_ARITHMETIC : 0) |
-    (std::is_array<T>::value ? trait_flags::cIS_ARRAY : 0) |
-    (std::is_class<T>::value ? trait_flags::cIS_CLASS : 0) |
-    (std::is_empty<T>::value ? trait_flags::cIS_EMPTY : 0) |
-    (std::is_floating_point<T>::value ? trait_flags::cIS_FLOATING_POINT : 0) |
-    (std::is_integral<T>::value ? trait_flags::cIS_INTEGRAL : 0) |
-    (std::is_object<T>::value ? trait_flags::cIS_OBJECT : 0) |
-    (std::is_pod<T>::value ? trait_flags::cIS_POD : 0) |
-    (std::is_pointer<T>::value ? trait_flags::cIS_POINTER : 0) |
-    (std::is_scalar<T>::value ? trait_flags::cIS_SCALAR : 0) |
-    (std::is_signed<T>::value ? trait_flags::cIS_SIGNED : 0) |
-    (std::is_unsigned<T>::value ? trait_flags::cIS_UNSIGNED : 0) |
-    (std::is_trivially_destructible<T>::value ? trait_flags::cHAS_TRIVIAL_DESTRUCTOR : 0) |*/
+    (IsDefaultConstructionZeroMemory<T>::value ? trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY : 0)
     ;
 
   // sanity check of type traits for type T
@@ -446,14 +530,10 @@ struct ElementType<rrlib::util::tEnumBasedFlags<TFlag, TStorage>>
   typedef TFlag type;
 };
 
-
 //----------------------------------------------------------------------
 // End of namespace declaration
 //----------------------------------------------------------------------
 }
 }
-
-static_assert(std::is_same<typename rrlib::rtti::NormalizedType<bool>::type, bool>::value, "Invalid trait implementation");
-static_assert(std::is_same<typename rrlib::rtti::NormalizedType<unsigned long>::type, typename std::conditional<sizeof(unsigned long) == 8, unsigned long long, unsigned int>::type>::value, "Invalid trait implementation");
 
 #endif

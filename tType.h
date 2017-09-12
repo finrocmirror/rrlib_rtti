@@ -104,6 +104,8 @@ class tType
 public:
 
   constexpr tType() : info(&detail::tTypeInfo::cNULL_TYPE_INFO) {}
+  explicit constexpr tType(const detail::tTypeInfo* info) : info(info)
+  {}
 
 
   /*!
@@ -145,7 +147,7 @@ public:
    */
   inline void DestructInstance(void* address) const
   {
-    if ((info->type_traits & (trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cHAS_TRIVIAL_DESTRUCTOR | trait_flags::cIS_DATA_TYPE)) == trait_flags::cIS_DATA_TYPE && address)
+    if ((info->type_traits & (trait_flags::cSUPPORTS_BITWISE_COPY | trait_flags::cHAS_TRIVIAL_DESTRUCTOR | trait_flags::cTYPE_CLASSIFICATION_BITS)) < static_cast<uint>(tTypeClassification::RPC_TYPE) && address)
     {
       (*GetBinaryOperations().destructor)(address);
     }
@@ -161,7 +163,7 @@ public:
    */
   inline void EmplaceInstance(void* placement) const
   {
-    if ((info->type_traits & (trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY | trait_flags::cIS_DATA_TYPE)) == trait_flags::cIS_DATA_TYPE)
+    if ((info->type_traits & (trait_flags::cIS_DEFAULT_CONSTRUCTION_ZERO_MEMORY | trait_flags::cTYPE_CLASSIFICATION_BITS)) < static_cast<uint>(tTypeClassification::RPC_TYPE))
     {
       (*GetBinaryOperations().constructor)(placement);
     }
@@ -214,7 +216,7 @@ public:
   }
 
   /*!
-   * \return In case of list: type of elements; otherwise null-type
+   * \return Type returned by ElementType type trait
    */
   inline tType GetElementType() const
   {
@@ -243,18 +245,18 @@ public:
   tType GetListType() const;
 
   /*!
-   * (this is not particularly efficient as it allocates memory - use alternatives such as GetPlainTypeName() or stream operators if efficiency/real-time is desired)
+   * (this is not particularly efficient as it allocates memory - use alternatives such as GetName(const char*, size_t) or stream operators if efficiency/real-time is desired)
    *
    * \return Name of data type
    */
   std::string GetName() const;
 
   /*!
-   * \return Returns type name of plain/element type (this is == GetName() for all non-list types T; for std::vector<T> it is, however, also the one for T)
+   * \return Returns type name of plain/element type (this is == GetName() for all types whose names are not auto-generated)
    */
   const char* GetPlainTypeName() const
   {
-    return (IsListType() || IsArray()) ? GetElementType().GetPlainTypeName() : GetSharedInfo().name;
+    return GetTypeClassification() <= tTypeClassification::AUTO_NAMED ? GetElementType().GetPlainTypeName() : GetSharedInfo().name;
   }
 
   /*!
@@ -272,12 +274,35 @@ public:
   inline size_t GetSize(bool as_generic_object = false) const;
 
   /*!
+   * If this type is a std::pair or std::tuple, returns elements types (first points to first element of element type array, second is number of elements in this array)
+   */
+  std::pair<const detail::tTypeInfo::tTupleElementInfo*, size_t> GetTupleTypes() const
+  {
+    tTypeClassification classification = GetTypeClassification();
+    typedef std::pair<const detail::tTypeInfo::tTupleElementInfo*, size_t> tResult;
+    if (classification == tTypeClassification::PAIR || classification == tTypeClassification::TUPLE)
+    {
+      const detail::tTypeInfo::tSharedInfoTuple& tuple_info = static_cast<const detail::tTypeInfo::tSharedInfoTuple&>(GetSharedInfo());
+      return tResult(tuple_info.elements, tuple_info.tuple_size);
+    }
+    return tResult(nullptr, 0);
+  }
+
+  /*!
    * \param handle Data type handle
    * \return Data type with specified handle (== nullptr if there's no type with this handle)
    */
   static tType GetType(size_t handle)
   {
     return (handle < detail::tTypeInfo::tSharedInfo::registered_types->Size()) ? tType((*detail::tTypeInfo::tSharedInfo::registered_types)[handle]) : tType();
+  }
+
+  /*!
+   * \return Classication of this type
+   */
+  tTypeClassification GetTypeClassification() const
+  {
+    return static_cast<tTypeClassification>(info->type_traits & trait_flags::cTYPE_CLASSIFICATION_BITS);
   }
 
   /*!
@@ -320,7 +345,11 @@ public:
    */
   inline bool HasName(const std::string& name) const
   {
-    return info->HasName(name);
+    return info->HasName(detail::tStringRange(name.c_str(), name.c_str() + name.length()));
+  }
+  inline bool HasName(const char* name) const
+  {
+    return info->HasName(detail::tStringRange(name, name + strlen(name)));
   }
 
   /*!
@@ -328,7 +357,7 @@ public:
    */
   inline bool IsArray() const
   {
-    return info->type_traits & trait_flags::cIS_ARRAY;
+    return (info->type_traits & trait_flags::cTYPE_CLASSIFICATION_BITS) == static_cast<uint>(tTypeClassification::ARRAY);
   }
 
   /*!
@@ -336,7 +365,7 @@ public:
    */
   inline bool IsListType() const
   {
-    return info->IsListType();
+    return (info->type_traits & trait_flags::cTYPE_CLASSIFICATION_BITS) == static_cast<uint>(tTypeClassification::LIST);
   }
 
   /*!
@@ -409,9 +438,6 @@ protected:
   friend class tTypedPointer;
   friend struct detail::tTypeInfo;
 
-  explicit constexpr tType(const detail::tTypeInfo* info) : info(info)
-  {}
-
   /*!
    * \return Reference to shared info
    */
@@ -471,6 +497,7 @@ private:
   const detail::tTypeInfo* info;
 };
 
+std::ostream& operator << (std::ostream& stream, const tType& type);
 serialization::tOutputStream& operator << (serialization::tOutputStream& stream, const tType& type);
 serialization::tInputStream& operator >> (serialization::tInputStream& stream, tType& type);
 serialization::tStringOutputStream& operator << (serialization::tStringOutputStream& stream, const tType& dt);

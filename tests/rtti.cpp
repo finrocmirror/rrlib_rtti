@@ -78,6 +78,8 @@ enum class tTestEnum
 static_assert(detail::HasCopyFromMethod<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
 static_assert(AutoRegisterVectorType<serialization::tMemoryBuffer>::value, "Trait not implemented correctly");
 static_assert(SupportsBitwiseCopy<std::array<int, 4>>::value, "Trait not implemented correctly");
+static_assert(std::is_same<typename rrlib::rtti::NormalizedType<bool>::type, bool>::value, "Invalid trait implementation");
+static_assert(std::is_same<typename rrlib::rtti::NormalizedType<unsigned long>::type, typename std::conditional<sizeof(unsigned long) == 8, unsigned long long, unsigned int>::type>::value, "Invalid trait implementation");
 
 //----------------------------------------------------------------------
 // Implementation
@@ -153,10 +155,14 @@ private:
       RRLIB_UNIT_TESTS_ASSERT(!type_list.HasName("List<Other Name>"));
       RRLIB_UNIT_TESTS_ASSERT(!type_list.HasName("Custom Name"));
       RRLIB_UNIT_TESTS_ASSERT(!type_list.HasName("Another Custom Name"));
+      RRLIB_UNIT_TESTS_ASSERT(tType::FindType("List<Custom Name>") == type_list);
+      RRLIB_UNIT_TESTS_ASSERT(tType::FindType("List<Another Custom Name>") == type_list);
     }
     {
       tDataType<std::tuple<std::string, rrlib::time::tTimestamp, std::vector<std::string>>> type;
       RRLIB_UNIT_TESTS_EQUALITY_MESSAGE("Names '" + type.GetName() + "' and 'Tuple<String, Timestamp, List<String>>' are not equal", type.GetName() == "Tuple<String, Timestamp, List<String>>", true);
+      RRLIB_UNIT_TESTS_ASSERT(type.HasName("Tuple<String, Timestamp, List<String>>"));
+      RRLIB_UNIT_TESTS_ASSERT(tType::FindType("Tuple<String, Timestamp, List<String>>") == type);
     }
     {
       tDataType<TemplateClass<std::vector<rrlib::time::tTimestamp>>> type;
