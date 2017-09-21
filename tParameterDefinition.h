@@ -105,7 +105,7 @@ public:
   tParameterDefinition(const char* name, const tTypedConstPointer& default_value, bool is_static, bool copy_name = false, bool copy_default_value = false) :
     name(name, copy_name),
     owned_default(copy_default_value ? default_value.GetType().CreateGenericObject() : nullptr),
-    type_and_default(copy_default_value ? owned_default->GetRawDataPointer() : &default_value, default_value.GetType()),
+    type_and_default(copy_default_value ? owned_default->GetRawDataPointer() : default_value.GetRawDataPointer(), default_value.GetType()),
     is_static(is_static)
   {
     if (owned_default)

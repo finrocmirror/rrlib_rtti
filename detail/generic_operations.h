@@ -364,7 +364,7 @@ struct GetVectorElementFunction
   static tTypedConstPointer GetVectorElement(const tTypedConstPointer& data, size_t index)
   {
     const T& v = *data.GetUnchecked<T>();
-    return index < v.size() ? tTypedConstPointer(&v[index], tDataType<typename serialization::IsSerializableContainer<T>::tValue>()) : tTypedConstPointer();
+    return index < v.size() ? tTypedConstPointer(&v[index], data.GetType().GetElementType()) : tTypedConstPointer();
   }
 
   static constexpr operations::tGetVectorElement value = &GetVectorElement;

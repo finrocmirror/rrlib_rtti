@@ -84,7 +84,7 @@ void tTypedPointer::Deserialize(const xml::tNode& node) const
   {
 #ifdef _LIB_RRLIB_XML_PRESENT_
     auto classification = type.GetTypeClassification();
-    bool pair = type.GetTypeClassification() == tTypeClassification::PAIR;;
+    bool pair = type.GetTypeClassification() == tTypeClassification::PAIR;
     if (pair || classification == tTypeClassification::TUPLE)
     {
       auto tuple_elements = type.GetTupleTypes();
@@ -159,7 +159,7 @@ void tTypedConstPointer::Serialize(xml::tNode& node) const
   {
 #ifdef _LIB_RRLIB_XML_PRESENT_
     auto classification = type.GetTypeClassification();
-    bool pair = type.GetTypeClassification() == tTypeClassification::PAIR;;
+    bool pair = type.GetTypeClassification() == tTypeClassification::PAIR;
     if (pair || classification == tTypeClassification::TUPLE)
     {
       auto tuple_elements = type.GetTupleTypes();
