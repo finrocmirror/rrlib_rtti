@@ -113,6 +113,7 @@ class tTestTraitsRtti : public util::tUnitTestSuite
   RRLIB_UNIT_TESTS_ADD_TEST(TestGenericOperations);
   RRLIB_UNIT_TESTS_ADD_TEST(TestDataTypeInstantiation);
   RRLIB_UNIT_TESTS_ADD_TEST(TestDeepCopy);
+  RRLIB_UNIT_TESTS_ADD_TEST(TestTypeSerialization);
   RRLIB_UNIT_TESTS_END_SUITE;
 
 private:
@@ -243,6 +244,20 @@ private:
       rrlib::rtti::GenericOperations<tTestEnum>::DeepCopy(i1, i2);
       RRLIB_UNIT_TESTS_ASSERT(i1 == i2);
     }
+  }
+
+  void TestTypeSerialization()
+  {
+    rrlib::serialization::tMemoryBuffer buffer;
+    rrlib::rtti::tDataType<std::string> output_type;
+    rrlib::rtti::tType input_type;
+    {
+      rrlib::serialization::tOutputStream stream(buffer);
+      stream << output_type;
+    }
+    rrlib::serialization::tInputStream stream(buffer);
+    stream >> input_type;
+    RRLIB_UNIT_TESTS_ASSERT(output_type == input_type);
   }
 
 };
