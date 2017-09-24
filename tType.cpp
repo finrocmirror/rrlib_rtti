@@ -105,7 +105,7 @@ void StreamType(TStream& stream, const tType& type)
     StreamType(stream, type.GetElementType());
     StreamChars(stream, ", ");
     char buffer[100];
-    sprintf(buffer, "%d", type.GetArraySize());
+    sprintf(buffer, "%zu", type.GetArraySize());
     StreamChars(stream, buffer);
     StreamChars(stream, '>');
     break;
