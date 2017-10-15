@@ -128,7 +128,7 @@ void tTypedPointer::Deserialize(serialization::tInputStream& stream, serializati
     serialization::tStringInputStream sis(stream.ReadString());
     Deserialize(sis);
   }
-  else
+  else if (encoding == serialization::tDataEncoding::XML)
   {
 #ifdef _LIB_RRLIB_XML_PRESENT_
     std::string s = stream.ReadString();
@@ -200,7 +200,7 @@ void tTypedConstPointer::Serialize(serialization::tOutputStream& stream, seriali
     Serialize(sos);
     stream.WriteString(sos.ToString());
   }
-  else
+  else if (encoding == serialization::tDataEncoding::XML)
   {
 #ifdef _LIB_RRLIB_XML_PRESENT_
     xml::tDocument d;
